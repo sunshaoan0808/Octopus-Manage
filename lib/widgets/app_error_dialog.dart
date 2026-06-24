@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:octopusmanage/l10n/app_localizations.dart';
+import 'package:octopusmanage/providers/app_provider.dart';
 import 'package:provider/provider.dart';
 
 /// Shows a simple error dialog with the given message.
@@ -9,16 +10,16 @@ Future<void> showErrorDialog(
   String message, {
   String? title,
 }) {
-  final loc = context.read<AppLocalizations?>() ?? AppLocalizations(AppLocale.en);
+  final loc = _resolveLoc(context);
   return showCupertinoDialog(
     context: context,
-    builder: (_) => CupertinoAlertDialog(
+    builder: (dialogContext) => CupertinoAlertDialog(
       title: title != null ? Text(title) : null,
       content: Text(message),
       actions: [
         CupertinoDialogAction(
           child: Text(loc.t('ok')),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => Navigator.pop(dialogContext),
         ),
       ],
     ),
@@ -34,24 +35,32 @@ Future<bool> showConfirmDialog(
   String? cancelText,
   bool isDanger = false,
 }) async {
-  final loc = context.read<AppLocalizations?>() ?? AppLocalizations(AppLocale.en);
+  final loc = _resolveLoc(context);
   final result = await showCupertinoDialog<bool>(
     context: context,
-    builder: (_) => CupertinoAlertDialog(
+    builder: (dialogContext) => CupertinoAlertDialog(
       title: Text(title),
       content: Text(content),
       actions: [
         CupertinoDialogAction(
           child: Text(cancelText ?? loc.t('cancel')),
-          onPressed: () => Navigator.pop(context, false),
+          onPressed: () => Navigator.pop(dialogContext, false),
         ),
         CupertinoDialogAction(
           isDestructiveAction: isDanger,
           child: Text(confirmText ?? loc.t('ok')),
-          onPressed: () => Navigator.pop(context, true),
+          onPressed: () => Navigator.pop(dialogContext, true),
         ),
       ],
     ),
   );
   return result == true;
+}
+
+AppLocalizations _resolveLoc(BuildContext context) {
+  try {
+    return context.read<AppProvider>().loc;
+  } on ProviderNotFoundException {
+    return AppLocalizations(AppLocale.en);
+  }
 }

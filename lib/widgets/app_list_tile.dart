@@ -255,10 +255,14 @@ class AppSettingItem extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (value != null)
-            Text(
-              value!,
-              style: theme.textTheme.caption?.copyWith(
-                color: colorScheme.onSurfaceVariant,
+            Flexible(
+              child: Text(
+                value!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.caption?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ?valueWidget,

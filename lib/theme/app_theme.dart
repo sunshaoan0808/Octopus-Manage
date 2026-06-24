@@ -48,6 +48,17 @@ class AppTheme {
     ),
   ];
 
+  static Color getRoleColor(String role) {
+    switch (role) {
+      case 'admin':
+        return colorRed;
+      case 'editor':
+        return colorBlue;
+      default:
+        return colorGray;
+    }
+  }
+
   // --- Semantic Colors ---
   static const Color colorBlue = Color(0xFF007AFF);
   static const Color colorGreen = Color(0xFF34C759);

@@ -77,7 +77,19 @@ class _AIRouteProgressSheetState extends State<AIRouteProgressSheet> {
   void _maybeHandleCompletion() {
     if (_completionHandled || !_progress.isCompletedWithResult) return;
     _completionHandled = true;
+    _loadResult();
     widget.onCompleted?.call();
+  }
+
+  Future<void> _loadResult() async {
+    try {
+      final api = context.read<AppProvider>().api;
+      final result = await api.getAIRouteResult(_progress.id);
+      if (!mounted) return;
+      setState(() => _progress = result);
+    } catch (_) {
+      // result is optional: don't show error if polling already succeeded
+    }
   }
 
   @override
@@ -490,7 +502,9 @@ class _AIRouteProgressSheetState extends State<AIRouteProgressSheet> {
                               children: [
                                 Text(
                                   channel.channelName.isEmpty
-                                      ? 'Channel ${channel.channelId}'
+                                      ? loc.t('channel_fallback_name', {
+                                          'id': '${channel.channelId}',
+                                        })
                                       : channel.channelName,
                                   style: theme.textTheme.body?.copyWith(
                                     fontWeight: FontWeight.w600,

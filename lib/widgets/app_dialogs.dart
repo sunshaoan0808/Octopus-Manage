@@ -26,6 +26,7 @@ class AppConfirmDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final loc = context.read<AppProvider>().loc;
 
     return CupertinoAlertDialog(
       title: Padding(
@@ -47,7 +48,7 @@ class AppConfirmDialog extends StatelessWidget {
         CupertinoDialogAction(
           onPressed: () => Navigator.pop(context, false),
           child: Text(
-            cancelText ?? 'Cancel',
+            cancelText ?? loc.t('cancel'),
             style: TextStyle(color: colorScheme.primary),
           ),
         ),
@@ -55,7 +56,7 @@ class AppConfirmDialog extends StatelessWidget {
           isDestructiveAction: isDanger,
           onPressed: () => Navigator.pop(context, true),
           child: Text(
-            confirmText ?? 'Confirm',
+            confirmText ?? loc.t('ok'),
             style: TextStyle(
               fontWeight: FontWeight.w600,
               color: isDanger
@@ -76,7 +77,7 @@ class AppConfirmDialog extends StatelessWidget {
     String? cancelText,
     bool isDanger = false,
   }) async {
-    final result = await showDialog<bool>(
+    final result = await showCupertinoDialog<bool>(
       context: context,
       builder: (_) => AppConfirmDialog(
         title: title,
@@ -126,7 +127,7 @@ class AppInputDialog extends StatefulWidget {
     int? maxLines,
     String? Function(String?)? validator,
   }) async {
-    return showDialog<String>(
+    return showCupertinoDialog<String>(
       context: context,
       builder: (_) => AppInputDialog(
         title: title,
@@ -161,6 +162,7 @@ class _AppInputDialogState extends State<AppInputDialog> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final loc = context.read<AppProvider>().loc;
 
     return CupertinoAlertDialog(
       title: Padding(
@@ -194,7 +196,7 @@ class _AppInputDialogState extends State<AppInputDialog> {
       actions: [
         CupertinoDialogAction(
           onPressed: () => Navigator.pop(context),
-          child: Text(widget.cancelText ?? 'Cancel'),
+          child: Text(widget.cancelText ?? loc.t('cancel')),
         ),
         CupertinoDialogAction(
           isDefaultAction: true,
@@ -203,7 +205,7 @@ class _AppInputDialogState extends State<AppInputDialog> {
               Navigator.pop(context, _controller.text);
             }
           },
-          child: Text(widget.confirmText ?? 'Save'),
+          child: Text(widget.confirmText ?? loc.t('save')),
         ),
       ],
     );
@@ -226,6 +228,8 @@ class AppTextDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final loc = context.read<AppProvider>().loc;
+
     return CupertinoAlertDialog(
       title: Padding(
         padding: const EdgeInsets.only(bottom: 4),
@@ -246,7 +250,7 @@ class AppTextDialog extends StatelessWidget {
         CupertinoDialogAction(
           isDefaultAction: true,
           onPressed: () => Navigator.pop(context),
-          child: Text(buttonText ?? 'OK'),
+          child: Text(buttonText ?? loc.t('ok')),
         ),
       ],
     );
@@ -259,7 +263,7 @@ class AppTextDialog extends StatelessWidget {
     String? buttonText,
     bool selectable = true,
   }) async {
-    await showDialog(
+    await showCupertinoDialog(
       context: context,
       builder: (_) => AppTextDialog(
         title: title,

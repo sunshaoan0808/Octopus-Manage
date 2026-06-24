@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:octopusmanage/l10n/app_localizations.dart';
 import 'package:octopusmanage/services/api_service.dart';
 import 'package:octopusmanage/services/octopus_api.dart';
+import 'package:octopusmanage/utils/parse_utils.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum WaitTimeUnit { ms, s, auto }
@@ -43,6 +44,7 @@ class AppProvider extends ChangeNotifier {
 
   AppProvider() {
     _apiService.onUnauthorized = () {
+      _error = null;
       notifyListeners();
     };
     api = OctopusApi(_apiService);
@@ -76,6 +78,7 @@ class AppProvider extends ChangeNotifier {
         _prefs!.getInt(kAutoRefreshIntervalSecondsKey) ?? 30,
       );
       await _apiService.loadSavedState();
+      _error = null;
       _initialized = true;
     } catch (e) {
       _error = e.toString();
@@ -123,10 +126,11 @@ class AppProvider extends ChangeNotifier {
         password,
         expire: rememberMe ? -1 : 0,
       );
-      final token = data['token'] as String? ?? '';
+      final token = parseString(data['token']);
       if (token.isNotEmpty) {
         await _apiService.setToken(token);
         _bootstrapped = true;
+        _error = null;
         notifyListeners();
         return true;
       }
@@ -141,7 +145,8 @@ class AppProvider extends ChangeNotifier {
   Future<void> checkBootstrapStatus() async {
     try {
       final data = await api.checkBootstrap();
-      _bootstrapped = data['initialized'] == true;
+      _bootstrapped = parseBool(data['initialized']);
+      _error = null;
     } catch (e) {
       _bootstrapped = null;
       _error = e.toString();
@@ -154,6 +159,7 @@ class AppProvider extends ChangeNotifier {
       final success = await api.createAdmin(username, password);
       if (success) {
         _bootstrapped = true;
+        _error = null;
         notifyListeners();
       }
       return success;
@@ -167,11 +173,13 @@ class AppProvider extends ChangeNotifier {
   Future<void> setBaseUrl(String url) async {
     await _apiService.setBaseUrl(url);
     _bootstrapped = null;
+    _error = null;
     notifyListeners();
   }
 
   Future<void> logout() async {
     await _apiService.logout();
+    _error = null;
     notifyListeners();
   }
 
