@@ -13,6 +13,10 @@ class AppLocalizations {
     // Login
     'login': {AppLocale.en: 'Login', AppLocale.zh: '登录'},
     'login_failed': {AppLocale.en: 'Login failed', AppLocale.zh: '登录失败'},
+    'invalid_server_url': {
+      AppLocale.en: 'Enter a valid server URL',
+      AppLocale.zh: '请输入有效的服务器地址',
+    },
     'server_url': {AppLocale.en: 'Server URL', AppLocale.zh: '服务器地址'},
     'username': {AppLocale.en: 'Username', AppLocale.zh: '用户名'},
     'password': {AppLocale.en: 'Password', AppLocale.zh: '密码'},
@@ -30,6 +34,8 @@ class AppLocalizations {
     'api_keys': {AppLocale.en: 'API Keys', AppLocale.zh: 'API Key'},
     'logs': {AppLocale.en: 'Logs', AppLocale.zh: '日志'},
     'settings': {AppLocale.en: 'Settings', AppLocale.zh: '设置'},
+    'users': {AppLocale.en: 'Users', AppLocale.zh: '用户'},
+    'ops': {AppLocale.en: 'Ops', AppLocale.zh: '运维'},
 
     // Dashboard
     'dashboard': {AppLocale.en: 'Dashboard', AppLocale.zh: '仪表盘'},
@@ -80,6 +86,10 @@ class AppLocalizations {
       AppLocale.zh: '渠道排行',
     },
     'show_more': {AppLocale.en: 'Show more', AppLocale.zh: '展开更多'},
+    'show_more_count': {
+      AppLocale.en: '+{count} more',
+      AppLocale.zh: '还有 {count} 项',
+    },
     'show_less': {AppLocale.en: 'Show less', AppLocale.zh: '收起'},
     'collapse': {AppLocale.en: 'Collapse', AppLocale.zh: '收起'},
     'token_consumption_ranking': {
@@ -283,6 +293,12 @@ class AppLocalizations {
       AppLocale.en: 'Empty = all models',
       AppLocale.zh: '留空 = 所有模型',
     },
+    'rate_limit_rpm': {AppLocale.en: 'Rate Limit RPM', AppLocale.zh: 'RPM 限制'},
+    'rate_limit_tpm': {AppLocale.en: 'Rate Limit TPM', AppLocale.zh: 'TPM 限制'},
+    'per_model_quota': {
+      AppLocale.en: 'Per-Model Quota JSON',
+      AppLocale.zh: '单模型配额 JSON',
+    },
 
     // Log
     'clear_logs': {AppLocale.en: 'Clear Logs', AppLocale.zh: '清除日志'},
@@ -296,6 +312,8 @@ class AppLocalizations {
     // Setting
     'server_version': {AppLocale.en: 'Server Version', AppLocale.zh: '服务器版本'},
     'language': {AppLocale.en: 'Language', AppLocale.zh: '语言'},
+    'language_english': {AppLocale.en: 'English', AppLocale.zh: '英文'},
+    'language_chinese': {AppLocale.en: 'Chinese', AppLocale.zh: '中文'},
     'empty': {AppLocale.en: '(empty)', AppLocale.zh: '(空)'},
     'save': {AppLocale.en: 'Save', AppLocale.zh: '保存'},
     'settings_subtitle': {
@@ -378,6 +396,8 @@ class AppLocalizations {
     'type_anthropic': {AppLocale.en: 'Anthropic', AppLocale.zh: 'Anthropic'},
     'type_gemini': {AppLocale.en: 'Gemini', AppLocale.zh: 'Gemini'},
     'type_volcengine': {AppLocale.en: 'Volcengine', AppLocale.zh: '火山引擎'},
+    'type_mimo': {AppLocale.en: 'Mimo', AppLocale.zh: 'Mimo'},
+    'type_unknown': {AppLocale.en: 'Type {type}', AppLocale.zh: '类型 {type}'},
 
     // Group modes
     'mode_round_robin': {AppLocale.en: 'Round Robin', AppLocale.zh: '轮询'},
@@ -540,6 +560,46 @@ class AppLocalizations {
       AppLocale.en: 'Auto Sample Threshold',
       AppLocale.zh: 'Auto 样本窗口阈值',
     },
+    'setting_auto_strategy_latency_weight': {
+      AppLocale.en: 'Auto Latency Weight',
+      AppLocale.zh: 'Auto 延迟权重',
+    },
+    'setting_alert_notify_language': {
+      AppLocale.en: 'Alert Language',
+      AppLocale.zh: '告警通知语言',
+    },
+    'setting_semantic_cache_enabled': {
+      AppLocale.en: 'Semantic Cache',
+      AppLocale.zh: '语义缓存开关',
+    },
+    'setting_semantic_cache_embedding_base_url': {
+      AppLocale.en: 'Cache Embedding Base URL',
+      AppLocale.zh: '缓存 Embedding 地址',
+    },
+    'setting_semantic_cache_embedding_model': {
+      AppLocale.en: 'Cache Embedding Model',
+      AppLocale.zh: '缓存 Embedding 模型',
+    },
+    'setting_semantic_cache_embedding_api_key': {
+      AppLocale.en: 'Cache Embedding API Key',
+      AppLocale.zh: '缓存 Embedding Key',
+    },
+    'setting_semantic_cache_similarity_threshold': {
+      AppLocale.en: 'Cache Similarity Threshold',
+      AppLocale.zh: '缓存相似度阈值',
+    },
+    'setting_semantic_cache_ttl_seconds': {
+      AppLocale.en: 'Cache TTL (sec)',
+      AppLocale.zh: '缓存 TTL (秒)',
+    },
+    'setting_semantic_cache_max_entries': {
+      AppLocale.en: 'Cache Max Entries',
+      AppLocale.zh: '缓存最大条目数',
+    },
+    'setting_semantic_cache_embedding_dimensions': {
+      AppLocale.en: 'Cache Embedding Dimensions',
+      AppLocale.zh: '缓存 Embedding 维度',
+    },
     'setting_ai_route_group_id': {
       AppLocale.en: 'AI Route Target Group',
       AppLocale.zh: 'AI Route 目标分组',
@@ -570,6 +630,14 @@ class AppLocalizations {
     },
     'not_set': {AppLocale.en: 'Not set', AppLocale.zh: '未设置'},
     'never': {AppLocale.en: 'Never', AppLocale.zh: '从未'},
+    'channel_fallback_name': {
+      AppLocale.en: 'Channel {id}',
+      AppLocale.zh: '渠道 {id}',
+    },
+    'api_key_fallback_name': {
+      AppLocale.en: 'Key #{id}',
+      AppLocale.zh: 'Key #{id}',
+    },
     'attempt': {AppLocale.en: 'Attempt', AppLocale.zh: '尝试'},
     'last_sync_time': {AppLocale.en: 'Last Sync', AppLocale.zh: '上次同步'},
     'last_update_time': {AppLocale.en: 'Last Update', AppLocale.zh: '上次更新'},
@@ -765,12 +833,119 @@ class AppLocalizations {
 
     // Misc
     'second': {AppLocale.en: 's', AppLocale.zh: '秒'},
+    'hour_unit': {AppLocale.en: 'hr', AppLocale.zh: '小时'},
     'select_channel': {AppLocale.en: 'Select Channel', AppLocale.zh: '选择渠道'},
     'load_channels_failed': {
       AppLocale.en: 'Failed to load channels',
       AppLocale.zh: '加载渠道失败',
     },
     'collapse_text': {AppLocale.en: 'Collapse', AppLocale.zh: '收起'},
+
+    // Users
+    'no_users': {AppLocale.en: 'No users', AppLocale.zh: '暂无用户'},
+    'create_first_user': {
+      AppLocale.en: 'Create the first user account',
+      AppLocale.zh: '创建第一个用户账户',
+    },
+    'create_user': {AppLocale.en: 'Create User', AppLocale.zh: '创建用户'},
+    'delete_user': {AppLocale.en: 'Delete User', AppLocale.zh: '删除用户'},
+    'change_role': {AppLocale.en: 'Change Role', AppLocale.zh: '修改角色'},
+    'change_role_for': {
+      AppLocale.en: 'Change role for {name}',
+      AppLocale.zh: '修改 {name} 的角色',
+    },
+    'current_role': {
+      AppLocale.en: 'Current role: {role}',
+      AppLocale.zh: '当前角色：{role}',
+    },
+    'role': {AppLocale.en: 'Role', AppLocale.zh: '角色'},
+    'role_admin': {AppLocale.en: 'Admin', AppLocale.zh: '管理员'},
+    'role_editor': {AppLocale.en: 'Editor', AppLocale.zh: '编辑者'},
+    'role_viewer': {AppLocale.en: 'Viewer', AppLocale.zh: '观察者'},
+
+    // Ops
+    'ops_system': {AppLocale.en: 'System', AppLocale.zh: '系统信息'},
+    'ops_health': {AppLocale.en: 'Health', AppLocale.zh: '健康状态'},
+    'ops_cache': {AppLocale.en: 'Semantic Cache', AppLocale.zh: '语义缓存'},
+    'ops_quota': {AppLocale.en: 'API Key Quota', AppLocale.zh: 'Key 配额总览'},
+    'ops_db_status': {AppLocale.en: 'Database', AppLocale.zh: '数据库'},
+    'ops_cache_status': {AppLocale.en: 'Cache', AppLocale.zh: '缓存'},
+    'ops_task_status': {AppLocale.en: 'Task Runtime', AppLocale.zh: '后台任务'},
+    'ops_ok': {AppLocale.en: 'OK', AppLocale.zh: '正常'},
+    'ops_fail': {AppLocale.en: 'FAIL', AppLocale.zh: '异常'},
+    'ops_healthy_groups': {AppLocale.en: 'Healthy Groups', AppLocale.zh: '健康分组'},
+    'ops_warning_groups': {AppLocale.en: 'Warning Groups', AppLocale.zh: '警告分组'},
+    'ops_degraded_groups': {AppLocale.en: 'Degraded Groups', AppLocale.zh: '降级分组'},
+    'ops_down_groups': {AppLocale.en: 'Down Groups', AppLocale.zh: '宕机分组'},
+    'ops_empty_groups': {AppLocale.en: 'Empty Groups', AppLocale.zh: '空分组'},
+    'ops_cache_entries': {AppLocale.en: 'Entries', AppLocale.zh: '条目数'},
+    'ops_cache_hits': {AppLocale.en: 'Hits', AppLocale.zh: '命中'},
+    'ops_cache_misses': {AppLocale.en: 'Misses', AppLocale.zh: '未命中'},
+    'ops_cache_hit_rate': {AppLocale.en: 'Hit Rate', AppLocale.zh: '命中率'},
+    'ops_cache_usage_rate': {AppLocale.en: 'Usage Rate', AppLocale.zh: '使用率'},
+    'ops_total_keys': {AppLocale.en: 'Total Keys', AppLocale.zh: 'Key 总数'},
+    'ops_enabled_keys': {AppLocale.en: 'Enabled', AppLocale.zh: '已启用'},
+    'ops_available_keys': {AppLocale.en: 'Available', AppLocale.zh: '可用'},
+    'ops_expired_keys': {AppLocale.en: 'Expired', AppLocale.zh: '已过期'},
+    'ops_limited_keys': {AppLocale.en: 'Rate-Limited', AppLocale.zh: '被限流'},
+    'ops_exhausted_keys': {AppLocale.en: 'Exhausted', AppLocale.zh: '配额耗尽'},
+    'ops_total_rpm': {AppLocale.en: 'Total RPM', AppLocale.zh: 'RPM 合计'},
+    'ops_total_tpm': {AppLocale.en: 'Total TPM', AppLocale.zh: 'TPM 合计'},
+    'ops_build_time': {AppLocale.en: 'Build Time', AppLocale.zh: '构建时间'},
+    'database_type': {AppLocale.en: 'Database', AppLocale.zh: '数据库类型'},
+
+    // Alerts
+    'alerts': {AppLocale.en: 'Alerts', AppLocale.zh: '告警'},
+    'no_alert_rules': {AppLocale.en: 'No alert rules', AppLocale.zh: '暂无告警规则'},
+    'create_first_alert_rule': {AppLocale.en: 'Create your first alert rule', AppLocale.zh: '创建第一条告警规则'},
+    'alert_rules': {AppLocale.en: 'Rules', AppLocale.zh: '规则'},
+    'alert_channels': {AppLocale.en: 'Channels', AppLocale.zh: '通知渠道'},
+    'alert_history': {AppLocale.en: 'History', AppLocale.zh: '历史'},
+    'create_alert_rule': {AppLocale.en: 'Create Alert Rule', AppLocale.zh: '创建告警规则'},
+    'edit_alert_rule': {AppLocale.en: 'Edit Alert Rule', AppLocale.zh: '编辑告警规则'},
+    'alert_condition': {AppLocale.en: 'Condition', AppLocale.zh: '条件'},
+    'alert_threshold': {AppLocale.en: 'Threshold', AppLocale.zh: '阈值'},
+    'alert_cooldown': {AppLocale.en: 'Cooldown (sec)', AppLocale.zh: '冷却时间 (秒)'},
+    'alert_condition_json': {AppLocale.en: 'Condition JSON', AppLocale.zh: '条件 JSON'},
+    'alert_notif_channel': {AppLocale.en: 'Notify Channel', AppLocale.zh: '通知渠道'},
+    'no_alert_channels': {AppLocale.en: 'No notification channels', AppLocale.zh: '暂无通知渠道'},
+    'create_first_alert_channel': {AppLocale.en: 'Create a notification channel first', AppLocale.zh: '请先创建通知渠道'},
+    'no_alert_history': {AppLocale.en: 'No alert history', AppLocale.zh: '暂无告警历史'},
+    'create_alert_channel': {AppLocale.en: 'Create Channel', AppLocale.zh: '创建通知渠道'},
+    'edit_alert_channel': {AppLocale.en: 'Edit Channel', AppLocale.zh: '编辑通知渠道'},
+    'model_market': {AppLocale.en: 'Model Market', AppLocale.zh: '模型市场'},
+    'market_summary': {AppLocale.en: 'Market Summary', AppLocale.zh: '市场总览'},
+    'coverage': {AppLocale.en: 'Coverage', AppLocale.zh: '覆盖'},
+    'latency': {AppLocale.en: 'Avg Latency', AppLocale.zh: '平均延迟'},
+    'market_channel_count': {AppLocale.en: 'Channels', AppLocale.zh: '渠道数'},
+    'market_key_count': {AppLocale.en: 'Keys', AppLocale.zh: 'Key数'},
+    'cache_evaluation': {AppLocale.en: 'Cache Evaluation', AppLocale.zh: '缓存评估'},
+    'evaluated_requests': {AppLocale.en: 'Evaluated', AppLocale.zh: '已评估'},
+    'cache_hit_responses': {AppLocale.en: 'Cache Hits', AppLocale.zh: '缓存命中'},
+    'cache_miss_requests': {AppLocale.en: 'Cache Misses', AppLocale.zh: '缓存未命中'},
+    'bypassed_requests': {AppLocale.en: 'Bypassed', AppLocale.zh: '被跳过'},
+    'stored_responses': {AppLocale.en: 'Stored', AppLocale.zh: '已存储'},
+
+    // Analytics
+    'analytics': {AppLocale.en: 'Analytics', AppLocale.zh: '分析'},
+    'analytics_overview': {AppLocale.en: 'Overview', AppLocale.zh: '概览'},
+    'analytics_providers': {AppLocale.en: 'Providers', AppLocale.zh: '供应商'},
+    'analytics_models': {AppLocale.en: 'Models', AppLocale.zh: '模型'},
+    'analytics_group_health': {AppLocale.en: 'Group Health', AppLocale.zh: '分组健康'},
+    'analytics_fallback_rate': {AppLocale.en: 'Fallback Rate', AppLocale.zh: '降级率'},
+    'analytics_range': {AppLocale.en: 'Time Range', AppLocale.zh: '时间范围'},
+    'analytics_range_1d': {AppLocale.en: '1 Day', AppLocale.zh: '1天'},
+    'analytics_range_7d': {AppLocale.en: '7 Days', AppLocale.zh: '7天'},
+    'analytics_range_30d': {AppLocale.en: '30 Days', AppLocale.zh: '30天'},
+    'analytics_range_90d': {AppLocale.en: '90 Days', AppLocale.zh: '90天'},
+
+    // Audit
+    'audit_logs': {AppLocale.en: 'Audit Logs', AppLocale.zh: '审计日志'},
+    'no_audit_logs': {AppLocale.en: 'No audit logs', AppLocale.zh: '暂无审计日志'},
+    'audit_action': {AppLocale.en: 'Action', AppLocale.zh: '操作'},
+    'audit_target': {AppLocale.en: 'Target', AppLocale.zh: '目标'},
+    'audit_method': {AppLocale.en: 'Method', AppLocale.zh: '方法'},
+    'audit_status': {AppLocale.en: 'Status', AppLocale.zh: '状态码'},
 
     // Errors
     'error': {AppLocale.en: 'Error', AppLocale.zh: '错误'},

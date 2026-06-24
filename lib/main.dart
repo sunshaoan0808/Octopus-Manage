@@ -96,7 +96,11 @@ class _AppShell extends StatelessWidget {
             color: colorScheme.errorContainer,
             child: Row(
               children: [
-                Icon(CupertinoIcons.exclamationmark_circle, color: colorScheme.error, size: 18),
+                Icon(
+                  CupertinoIcons.exclamationmark_circle,
+                  color: colorScheme.error,
+                  size: 18,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
