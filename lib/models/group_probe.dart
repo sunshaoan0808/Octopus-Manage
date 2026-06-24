@@ -29,13 +29,13 @@ class GroupModelTestResult {
     return GroupModelTestResult(
       itemId: parseInt(json['item_id']),
       channelId: parseInt(json['channel_id']),
-      channelName: json['channel_name'] as String? ?? '',
-      modelName: json['model_name'] as String? ?? '',
-      passed: json['passed'] as bool? ?? false,
+      channelName: parseString(json['channel_name']),
+      modelName: parseString(json['model_name']),
+      passed: parseBool(json['passed']),
       attempts: parseInt(json['attempts']),
       statusCode: parseInt(json['status_code']),
-      responseText: json['response_text'] as String? ?? '',
-      message: json['message'] as String? ?? '',
+      responseText: parseString(json['response_text']),
+      message: parseString(json['message']),
     );
   }
 
@@ -73,19 +73,15 @@ class GroupModelTestProgress {
 
   factory GroupModelTestProgress.fromJson(Map<String, dynamic> json) {
     return GroupModelTestProgress(
-      id: json['id'] as String? ?? '',
-      passed: json['passed'] as bool? ?? false,
+      id: parseString(json['id']),
+      passed: parseBool(json['passed']),
       completed: parseInt(json['completed']),
       total: parseInt(json['total']),
-      done: json['done'] as bool? ?? false,
-      results:
-          (json['results'] as List?)
-              ?.map(
-                (e) => GroupModelTestResult.fromJson(e as Map<String, dynamic>),
-              )
-              .toList() ??
-          [],
-      message: json['message'] as String? ?? '',
+      done: parseBool(json['done']),
+      results: parseJsonMapList(
+        json['results'],
+      ).map(GroupModelTestResult.fromJson).toList(),
+      message: parseString(json['message']),
     );
   }
 
@@ -137,22 +133,12 @@ class AutoGroupResult {
       skippedExistingGroups: parseInt(json['skipped_existing_groups']),
       skippedCoveredModels: parseInt(json['skipped_covered_models']),
       failedGroups: parseInt(json['failed_groups']),
-      created:
-          (json['created'] as List?)
-              ?.map(
-                (item) =>
-                    AutoGroupCreatedItem.fromJson(item as Map<String, dynamic>),
-              )
-              .toList() ??
-          const [],
-      skipped:
-          (json['skipped'] as List?)
-              ?.map(
-                (item) =>
-                    AutoGroupSkippedItem.fromJson(item as Map<String, dynamic>),
-              )
-              .toList() ??
-          const [],
+      created: parseJsonMapList(
+        json['created'],
+      ).map(AutoGroupCreatedItem.fromJson).toList(),
+      skipped: parseJsonMapList(
+        json['skipped'],
+      ).map(AutoGroupSkippedItem.fromJson).toList(),
     );
   }
 
@@ -174,13 +160,9 @@ class AutoGroupCreatedItem {
 
   factory AutoGroupCreatedItem.fromJson(Map<String, dynamic> json) {
     return AutoGroupCreatedItem(
-      name: json['name'] as String? ?? '',
-      endpointType: json['endpoint_type'] as String? ?? '*',
-      matchedModels:
-          (json['matched_models'] as List?)
-              ?.map((item) => item.toString())
-              .toList() ??
-          const [],
+      name: parseString(json['name']),
+      endpointType: parseString(json['endpoint_type'], fallback: '*'),
+      matchedModels: parseStringList(json['matched_models']),
     );
   }
 }
@@ -198,9 +180,9 @@ class AutoGroupSkippedItem {
 
   factory AutoGroupSkippedItem.fromJson(Map<String, dynamic> json) {
     return AutoGroupSkippedItem(
-      name: json['name'] as String? ?? '',
-      endpointType: json['endpoint_type'] as String? ?? '*',
-      reason: json['reason'] as String? ?? '',
+      name: parseString(json['name']),
+      endpointType: parseString(json['endpoint_type'], fallback: '*'),
+      reason: parseString(json['reason']),
     );
   }
 }

@@ -26,20 +26,16 @@ class Group {
   factory Group.fromJson(Map<String, dynamic> json) {
     return Group(
       id: parseInt(json['id']),
-      name: json['name'] as String? ?? '',
+      name: parseString(json['name']),
       endpointType: normalizeGroupEndpointType(
-        json['endpoint_type'] as String? ?? '*',
+        parseString(json['endpoint_type'], fallback: '*'),
       ),
       mode: parseInt(json['mode']),
-      matchRegex: json['match_regex'] as String? ?? '',
+      matchRegex: parseString(json['match_regex']),
       firstTokenTimeOut: parseInt(json['first_token_time_out']),
       sessionKeepTime: parseInt(json['session_keep_time']),
-      createdTime: json['created_time'] as String? ?? '',
-      items:
-          (json['items'] as List?)
-              ?.map((e) => GroupItem.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      createdTime: parseString(json['created_time']),
+      items: parseJsonMapList(json['items']).map(GroupItem.fromJson).toList(),
     );
   }
 
@@ -80,7 +76,7 @@ class GroupItem {
       id: parseInt(json['id']),
       groupId: parseInt(json['group_id']),
       channelId: parseInt(json['channel_id']),
-      modelName: json['model_name'] as String? ?? '',
+      modelName: parseString(json['model_name']),
       priority: parseInt(json['priority']),
       weight: parseInt(json['weight']),
     );

@@ -40,35 +40,33 @@ class Channel {
   factory Channel.fromJson(Map<String, dynamic> json) {
     return Channel(
       id: parseInt(json['id']),
-      name: json['name'] as String? ?? '',
-      type: json['type'] as int? ?? 0,
-      enabled: json['enabled'] as bool? ?? true,
-      baseUrls:
-          (json['base_urls'] as List?)
-              ?.map((e) => BaseUrl.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      keys:
-          (json['keys'] as List?)
-              ?.map((e) => ChannelKey.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      model: json['model'] as String? ?? '',
-      customModel: json['custom_model'] as String? ?? '',
-      proxy: json['proxy'] as bool? ?? false,
-      autoSync: json['auto_sync'] as bool? ?? false,
-      autoGroup: json['auto_group'] as int? ?? 0,
-      customHeader:
-          (json['custom_header'] as List?)
-              ?.map((e) => CustomHeader.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
-      paramOverride: json['param_override'] as String?,
-      channelProxy: json['channel_proxy'] as String?,
-      stats: json['stats'] != null
-          ? StatsChannel.fromJson(json['stats'] as Map<String, dynamic>)
+      name: parseString(json['name']),
+      type: parseInt(json['type']),
+      enabled: parseBool(json['enabled'], fallback: true),
+      baseUrls: parseJsonMapList(
+        json['base_urls'],
+      ).map(BaseUrl.fromJson).toList(),
+      keys: parseJsonMapList(json['keys']).map(ChannelKey.fromJson).toList(),
+      model: parseString(json['model']),
+      customModel: parseString(json['custom_model']),
+      proxy: parseBool(json['proxy']),
+      autoSync: parseBool(json['auto_sync']),
+      autoGroup: parseInt(json['auto_group']),
+      customHeader: parseJsonMapList(
+        json['custom_header'],
+      ).map(CustomHeader.fromJson).toList(),
+      paramOverride: json['param_override'] == null
+          ? null
+          : parseString(json['param_override']),
+      channelProxy: json['channel_proxy'] == null
+          ? null
+          : parseString(json['channel_proxy']),
+      stats: parseJsonMap(json['stats']) != null
+          ? StatsChannel.fromJson(parseJsonMap(json['stats'])!)
           : null,
-      matchRegex: json['match_regex'] as String?,
+      matchRegex: json['match_regex'] == null
+          ? null
+          : parseString(json['match_regex']),
     );
   }
 
@@ -101,8 +99,8 @@ class BaseUrl {
 
   factory BaseUrl.fromJson(Map<String, dynamic> json) {
     return BaseUrl(
-      url: json['url'] as String? ?? '',
-      delay: json['delay'] as int? ?? 0,
+      url: parseString(json['url']),
+      delay: parseInt(json['delay']),
     );
   }
 
@@ -117,8 +115,8 @@ class CustomHeader {
 
   factory CustomHeader.fromJson(Map<String, dynamic> json) {
     return CustomHeader(
-      headerKey: json['header_key'] as String? ?? '',
-      headerValue: json['header_value'] as String? ?? '',
+      headerKey: parseString(json['header_key']),
+      headerValue: parseString(json['header_value']),
     );
   }
 
@@ -153,12 +151,12 @@ class ChannelKey {
     return ChannelKey(
       id: parseInt(json['id']),
       channelId: parseInt(json['channel_id']),
-      enabled: json['enabled'] as bool? ?? true,
-      channelKey: json['channel_key'] as String? ?? '',
-      statusCode: json['status_code'] as int? ?? 0,
-      lastUseTimeStamp: json['last_use_time_stamp'] as int? ?? 0,
-      totalCost: (json['total_cost'] as num?)?.toDouble() ?? 0,
-      remark: json['remark'] as String? ?? '',
+      enabled: parseBool(json['enabled'], fallback: true),
+      channelKey: parseString(json['channel_key']),
+      statusCode: parseInt(json['status_code']),
+      lastUseTimeStamp: parseInt(json['last_use_time_stamp']),
+      totalCost: parseDouble(json['total_cost']),
+      remark: parseString(json['remark']),
     );
   }
 
@@ -196,13 +194,13 @@ class StatsChannel {
   factory StatsChannel.fromJson(Map<String, dynamic> json) {
     return StatsChannel(
       channelId: parseInt(json['channel_id']),
-      inputToken: json['input_token'] as int? ?? 0,
-      outputToken: json['output_token'] as int? ?? 0,
-      inputCost: (json['input_cost'] as num?)?.toDouble() ?? 0,
-      outputCost: (json['output_cost'] as num?)?.toDouble() ?? 0,
-      waitTime: json['wait_time'] as int? ?? 0,
-      requestSuccess: json['request_success'] as int? ?? 0,
-      requestFailed: json['request_failed'] as int? ?? 0,
+      inputToken: parseInt(json['input_token']),
+      outputToken: parseInt(json['output_token']),
+      inputCost: parseDouble(json['input_cost']),
+      outputCost: parseDouble(json['output_cost']),
+      waitTime: parseInt(json['wait_time']),
+      requestSuccess: parseInt(json['request_success']),
+      requestFailed: parseInt(json['request_failed']),
     );
   }
 

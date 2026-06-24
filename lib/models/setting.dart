@@ -1,3 +1,5 @@
+import 'package:octopusmanage/utils/parse_utils.dart';
+
 class Setting {
   final String key;
   final String value;
@@ -6,8 +8,8 @@ class Setting {
 
   factory Setting.fromJson(Map<String, dynamic> json) {
     return Setting(
-      key: json['key'] as String? ?? '',
-      value: json['value'] as String? ?? '',
+      key: parseString(json['key']),
+      value: parseString(json['value']),
     );
   }
 

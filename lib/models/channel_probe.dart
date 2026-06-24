@@ -25,45 +25,41 @@ class ChannelTestResult {
 
   factory ChannelTestResult.fromJson(Map<String, dynamic> json) {
     return ChannelTestResult(
-      baseUrl: json['base_url'] as String? ?? '',
-      keyRemark: json['key_remark'] as String? ?? '',
-      keyMasked: json['key_masked'] as String? ?? '',
+      baseUrl: parseString(json['base_url']),
+      keyRemark: parseString(json['key_remark']),
+      keyMasked: parseString(json['key_masked']),
       statusCode: parseInt(json['status_code']),
-      passed: json['passed'] as bool? ?? false,
+      passed: parseBool(json['passed']),
       latencyMs: parseInt(json['latency_ms']),
-      message: json['message'] as String? ?? '',
-      responseBody: json['response_body'] as String? ?? '',
+      message: parseString(json['message']),
+      responseBody: parseString(json['response_body']),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'base_url': baseUrl,
-        'key_remark': keyRemark,
-        'key_masked': keyMasked,
-        'status_code': statusCode,
-        'passed': passed,
-        'latency_ms': latencyMs,
-        'message': message,
-        'response_body': responseBody,
-      };
+    'base_url': baseUrl,
+    'key_remark': keyRemark,
+    'key_masked': keyMasked,
+    'status_code': statusCode,
+    'passed': passed,
+    'latency_ms': latencyMs,
+    'message': message,
+    'response_body': responseBody,
+  };
 }
 
 class ChannelTestSummary {
   final bool passed;
   final List<ChannelTestResult> results;
 
-  ChannelTestSummary({
-    this.passed = false,
-    this.results = const [],
-  });
+  ChannelTestSummary({this.passed = false, this.results = const []});
 
   factory ChannelTestSummary.fromJson(Map<String, dynamic> json) {
     return ChannelTestSummary(
-      passed: json['passed'] as bool? ?? false,
-      results: (json['results'] as List?)
-              ?.map((e) => ChannelTestResult.fromJson(e as Map<String, dynamic>))
-              .toList() ??
-          [],
+      passed: parseBool(json['passed']),
+      results: parseJsonMapList(
+        json['results'],
+      ).map(ChannelTestResult.fromJson).toList(),
     );
   }
 }

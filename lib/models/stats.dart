@@ -29,8 +29,8 @@ class StatsMetrics {
     return StatsMetrics(
       inputToken: parseInt(json['input_token']),
       outputToken: parseInt(json['output_token']),
-      inputCost: (json['input_cost'] as num?)?.toDouble() ?? 0,
-      outputCost: (json['output_cost'] as num?)?.toDouble() ?? 0,
+      inputCost: parseDouble(json['input_cost']),
+      outputCost: parseDouble(json['output_cost']),
       waitTime: parseInt(json['wait_time']),
       requestSuccess: parseInt(json['request_success']),
       requestFailed: parseInt(json['request_failed']),
@@ -56,15 +56,12 @@ class StatsDaily {
 
   factory StatsDaily.fromJson(Map<String, dynamic> json) {
     return StatsDaily(
-      date: json['date'] as String? ?? '',
+      date: parseString(json['date']),
       metrics: StatsMetrics.fromJson(json),
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'date': date,
-    ...metrics.toJson(),
-  };
+  Map<String, dynamic> toJson() => {'date': date, ...metrics.toJson()};
 }
 
 class StatsHourly {
@@ -77,7 +74,7 @@ class StatsHourly {
   factory StatsHourly.fromJson(Map<String, dynamic> json) {
     return StatsHourly(
       hour: parseInt(json['hour']),
-      date: json['date'] as String? ?? '',
+      date: parseString(json['date']),
       metrics: StatsMetrics.fromJson(json),
     );
   }

@@ -35,17 +35,17 @@ class RelayLog {
     return RelayLog(
       id: parseInt(json['id']),
       time: parseInt(json['time']),
-      requestModelName: json['request_model_name'] as String? ?? '',
-      requestApiKeyName: json['request_api_key_name'] as String? ?? '',
+      requestModelName: parseString(json['request_model_name']),
+      requestApiKeyName: parseString(json['request_api_key_name']),
       channelId: parseInt(json['channel_id'] ?? json['channel']),
-      channelName: json['channel_name'] as String? ?? '',
-      actualModelName: json['actual_model_name'] as String? ?? '',
+      channelName: parseString(json['channel_name']),
+      actualModelName: parseString(json['actual_model_name']),
       inputTokens: parseInt(json['input_tokens']),
       outputTokens: parseInt(json['output_tokens']),
       ftut: parseInt(json['ftut']),
       useTime: parseInt(json['use_time']),
-      cost: (json['cost'] as num?)?.toDouble() ?? 0,
-      error: json['error'] as String? ?? '',
+      cost: parseDouble(json['cost']),
+      error: parseString(json['error']),
     );
   }
 

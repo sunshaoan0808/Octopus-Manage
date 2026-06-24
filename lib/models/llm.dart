@@ -16,25 +16,21 @@ class LLMInfo {
   });
 
   factory LLMInfo.fromJson(Map<String, dynamic> json) {
-    final price = json['LLMPrice'] as Map<String, dynamic>?;
+    final price = parseJsonMap(json['LLMPrice']);
     return LLMInfo(
-      name: json['name'] as String? ?? '',
-      input:
-          (json['input'] as num?)?.toDouble() ??
-          (price?['input'] as num?)?.toDouble() ??
-          0,
-      output:
-          (json['output'] as num?)?.toDouble() ??
-          (price?['output'] as num?)?.toDouble() ??
-          0,
-      cacheRead:
-          (json['cache_read'] as num?)?.toDouble() ??
-          (price?['cache_read'] as num?)?.toDouble() ??
-          0,
-      cacheWrite:
-          (json['cache_write'] as num?)?.toDouble() ??
-          (price?['cache_write'] as num?)?.toDouble() ??
-          0,
+      name: parseString(json['name']),
+      input: json['input'] != null
+          ? parseDouble(json['input'])
+          : parseDouble(price?['input']),
+      output: json['output'] != null
+          ? parseDouble(json['output'])
+          : parseDouble(price?['output']),
+      cacheRead: json['cache_read'] != null
+          ? parseDouble(json['cache_read'])
+          : parseDouble(price?['cache_read']),
+      cacheWrite: json['cache_write'] != null
+          ? parseDouble(json['cache_write'])
+          : parseDouble(price?['cache_write']),
     );
   }
 
@@ -62,10 +58,10 @@ class LLMChannel {
 
   factory LLMChannel.fromJson(Map<String, dynamic> json) {
     return LLMChannel(
-      name: json['name'] as String? ?? '',
-      enabled: json['enabled'] as bool? ?? true,
+      name: parseString(json['name']),
+      enabled: parseBool(json['enabled'], fallback: true),
       channelId: parseInt(json['channel_id']),
-      channelName: json['channel_name'] as String? ?? '',
+      channelName: parseString(json['channel_name']),
     );
   }
 

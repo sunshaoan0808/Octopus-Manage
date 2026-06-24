@@ -8,6 +8,9 @@ class APIKey {
   final int expireAt;
   final double maxCost;
   final String supportedModels;
+  final int rateLimitRPM;
+  final int rateLimitTPM;
+  final String perModelQuotaJson;
 
   APIKey({
     this.id = 0,
@@ -17,17 +20,23 @@ class APIKey {
     this.expireAt = 0,
     this.maxCost = 0,
     this.supportedModels = '',
+    this.rateLimitRPM = 0,
+    this.rateLimitTPM = 0,
+    this.perModelQuotaJson = '',
   });
 
   factory APIKey.fromJson(Map<String, dynamic> json) {
     return APIKey(
       id: parseInt(json['id']),
-      name: json['name'] as String? ?? '',
-      apiKey: json['api_key'] as String? ?? '',
-      enabled: json['enabled'] as bool? ?? true,
-      expireAt: json['expire_at'] as int? ?? 0,
-      maxCost: (json['max_cost'] as num?)?.toDouble() ?? 0,
-      supportedModels: json['supported_models'] as String? ?? '',
+      name: parseString(json['name']),
+      apiKey: parseString(json['api_key']),
+      enabled: parseBool(json['enabled'], fallback: true),
+      expireAt: parseInt(json['expire_at']),
+      maxCost: parseDouble(json['max_cost']),
+      supportedModels: parseString(json['supported_models']),
+      rateLimitRPM: parseInt(json['rate_limit_rpm']),
+      rateLimitTPM: parseInt(json['rate_limit_tpm']),
+      perModelQuotaJson: parseString(json['per_model_quota_json']),
     );
   }
 
@@ -40,6 +49,9 @@ class APIKey {
       'expire_at': expireAt,
       'max_cost': maxCost,
       if (supportedModels.isNotEmpty) 'supported_models': supportedModels,
+      'rate_limit_rpm': rateLimitRPM,
+      'rate_limit_tpm': rateLimitTPM,
+      if (perModelQuotaJson.isNotEmpty) 'per_model_quota_json': perModelQuotaJson,
     };
   }
 }

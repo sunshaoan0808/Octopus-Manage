@@ -27,7 +27,7 @@ class AIRouteResult {
 
   factory AIRouteResult.fromJson(Map<String, dynamic> json) {
     return AIRouteResult(
-      scope: parseAIRouteScope(json['scope'] as String?),
+      scope: parseAIRouteScope(parseString(json['scope'])),
       groupId: parseInt(json['group_id']),
       groupCount: parseInt(json['group_count']),
       routeCount: parseInt(json['route_count']),
@@ -97,22 +97,14 @@ class AIRouteBatchProgress {
     return AIRouteBatchProgress(
       index: parseInt(json['index']),
       total: parseInt(json['total']),
-      endpointType: json['endpoint_type'] as String? ?? '',
+      endpointType: parseString(json['endpoint_type']),
       modelCount: parseInt(json['model_count']),
-      channelIds:
-          (json['channel_ids'] as List?)
-              ?.map((item) => parseInt(item))
-              .toList() ??
-          const [],
-      channelNames:
-          (json['channel_names'] as List?)
-              ?.map((item) => item.toString())
-              .toList() ??
-          const [],
-      serviceName: json['service_name'] as String? ?? '',
+      channelIds: parseIntList(json['channel_ids']),
+      channelNames: parseStringList(json['channel_names']),
+      serviceName: parseString(json['service_name']),
       attempt: parseInt(json['attempt']),
-      status: json['status'] as String? ?? '',
-      message: json['message'] as String? ?? '',
+      status: parseString(json['status']),
+      message: parseString(json['message']),
     );
   }
 }
@@ -139,12 +131,12 @@ class AIRouteChannelProgress {
   factory AIRouteChannelProgress.fromJson(Map<String, dynamic> json) {
     return AIRouteChannelProgress(
       channelId: parseInt(json['channel_id']),
-      channelName: json['channel_name'] as String? ?? '',
-      provider: json['provider'] as String? ?? '',
-      status: json['status'] as String? ?? 'pending',
+      channelName: parseString(json['channel_name']),
+      provider: parseString(json['provider']),
+      status: parseString(json['status'], fallback: 'pending'),
       totalModels: parseInt(json['total_models']),
       processedModels: parseInt(json['processed_models']),
-      message: json['message'] as String? ?? '',
+      message: parseString(json['message']),
     );
   }
 }
@@ -205,58 +197,46 @@ class AIRouteProgress {
       done && status == 'completed' && resultReady;
 
   factory AIRouteProgress.fromJson(Map<String, dynamic> json) {
-    final channelList =
-        (json['channels'] as List?)
-            ?.map(
-              (item) =>
-                  AIRouteChannelProgress.fromJson(item as Map<String, dynamic>),
-            )
-            .toList() ??
-        const <AIRouteChannelProgress>[];
+    final channelList = parseJsonMapList(
+      json['channels'],
+    ).map(AIRouteChannelProgress.fromJson).toList();
 
     return AIRouteProgress(
-      id: json['id'] as String? ?? '',
-      scope: parseAIRouteScope(json['scope'] as String?),
+      id: parseString(json['id']),
+      scope: parseAIRouteScope(parseString(json['scope'])),
       groupId: parseInt(json['group_id']),
-      status:
-          json['status'] as String? ??
-          (json['done'] == true ? 'completed' : 'queued'),
-      currentStep:
-          json['current_step'] as String? ??
-          (json['done'] == true ? 'completed' : 'queued'),
+      status: parseString(
+        json['status'],
+        fallback: parseBool(json['done']) ? 'completed' : 'queued',
+      ),
+      currentStep: parseString(
+        json['current_step'],
+        fallback: parseBool(json['done']) ? 'completed' : 'queued',
+      ),
       progressPercent: parseInt(json['progress_percent']),
       totalBatches: parseInt(json['total_batches']),
       completedBatches: parseInt(json['completed_batches']),
-      done: json['done'] as bool? ?? false,
-      resultReady: json['result_ready'] as bool? ?? false,
-      message: json['message'] as String? ?? '',
-      errorReason: json['error_reason'] as String? ?? '',
-      startedAt: json['started_at']?.toString() ?? '',
-      updatedAt: json['updated_at']?.toString() ?? '',
-      heartbeatAt: json['heartbeat_at']?.toString() ?? '',
-      finishedAt: json['finished_at']?.toString() ?? '',
+      done: parseBool(json['done']),
+      resultReady: parseBool(json['result_ready']),
+      message: parseString(json['message']),
+      errorReason: parseString(json['error_reason']),
+      startedAt: parseString(json['started_at']),
+      updatedAt: parseString(json['updated_at']),
+      heartbeatAt: parseString(json['heartbeat_at']),
+      finishedAt: parseString(json['finished_at']),
       eventSequence: parseInt(json['event_sequence']),
-      summary: json['summary'] is Map<String, dynamic>
-          ? AIRouteProgressSummary.fromJson(
-              json['summary'] as Map<String, dynamic>,
-            )
+      summary: parseJsonMap(json['summary']) != null
+          ? AIRouteProgressSummary.fromJson(parseJsonMap(json['summary'])!)
           : null,
-      currentBatch: json['current_batch'] is Map<String, dynamic>
-          ? AIRouteBatchProgress.fromJson(
-              json['current_batch'] as Map<String, dynamic>,
-            )
+      currentBatch: parseJsonMap(json['current_batch']) != null
+          ? AIRouteBatchProgress.fromJson(parseJsonMap(json['current_batch'])!)
           : null,
-      runningBatches:
-          (json['running_batches'] as List?)
-              ?.map(
-                (item) =>
-                    AIRouteBatchProgress.fromJson(item as Map<String, dynamic>),
-              )
-              .toList() ??
-          const <AIRouteBatchProgress>[],
+      runningBatches: parseJsonMapList(
+        json['running_batches'],
+      ).map(AIRouteBatchProgress.fromJson).toList(),
       channels: channelList,
-      result: json['result'] is Map<String, dynamic>
-          ? AIRouteResult.fromJson(json['result'] as Map<String, dynamic>)
+      result: parseJsonMap(json['result']) != null
+          ? AIRouteResult.fromJson(parseJsonMap(json['result'])!)
           : null,
     );
   }
