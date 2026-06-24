@@ -13,6 +13,7 @@ import 'package:octopusmanage/models/llm.dart';
 import 'package:octopusmanage/models/ops.dart';
 import 'package:octopusmanage/models/relay_log.dart';
 import 'package:octopusmanage/models/setting.dart';
+import 'package:octopusmanage/models/site.dart';
 import 'package:octopusmanage/models/stats.dart';
 import 'package:octopusmanage/models/user.dart';
 import 'package:octopusmanage/utils/parse_utils.dart';
@@ -581,6 +582,88 @@ class OctopusApi {
   Future<AuditLog> getAuditLogDetail(int id) async {
     final res = await _api.get('/api/v1/audit/detail', query: {'id': '$id'});
     return AuditLog.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  // ====== Site ======
+  Future<List<Site>> getSites() async {
+    final res = await _api.get('/api/v1/site/list');
+    return parseJsonMapList(res['data']).map(Site.fromJson).toList();
+  }
+
+  Future<Site> getSite(int id) async {
+    final res = await _api.get('/api/v1/site/detail', query: {'id': '$id'});
+    return Site.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<Site> createSite(Site site) async {
+    final res = await _api.post('/api/v1/site/create', body: site.toJson());
+    return Site.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<Site> updateSite(Site site) async {
+    final res = await _api.post('/api/v1/site/update', body: site.toJson());
+    return Site.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<void> deleteSite(int id) async {
+    await _api.delete('/api/v1/site/delete/$id');
+  }
+
+  Future<void> enableSite(int id, bool enabled) async {
+    await _api.post(
+      '/api/v1/site/enable',
+      body: {'id': id, 'enabled': enabled},
+    );
+  }
+
+  Future<Site> detectSite(String baseUrl) async {
+    final res = await _api.post(
+      '/api/v1/site/detect',
+      body: {'base_url': baseUrl},
+    );
+    return Site.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<void> batchUpdateSites(
+    List<int> ids,
+    Map<String, dynamic> updates,
+  ) async {
+    await _api.post(
+      '/api/v1/site/batch-update',
+      body: {'ids': ids, ...updates},
+    );
+  }
+
+  Future<void> archiveSite(int id) async {
+    await _api.post('/api/v1/site/archive', body: {'id': id});
+  }
+
+  Future<void> restoreSite(int id) async {
+    await _api.post('/api/v1/site/restore', body: {'id': id});
+  }
+
+  Future<List<SiteAccount>> getSiteAccounts(int siteId) async {
+    final res = await _api.get(
+      '/api/v1/site/accounts',
+      query: {'site_id': '$siteId'},
+    );
+    return parseJsonMapList(res['data']).map(SiteAccount.fromJson).toList();
+  }
+
+  Future<List<SiteToken>> getSiteTokens(int siteId) async {
+    final res = await _api.get(
+      '/api/v1/site/tokens',
+      query: {'site_id': '$siteId'},
+    );
+    return parseJsonMapList(res['data']).map(SiteToken.fromJson).toList();
+  }
+
+  Future<List<SiteModel>> getSiteModels(int siteId) async {
+    final res = await _api.get(
+      '/api/v1/site/models',
+      query: {'site_id': '$siteId'},
+    );
+    return parseJsonMapList(res['data']).map(SiteModel.fromJson).toList();
   }
 
   // ====== Update ======
