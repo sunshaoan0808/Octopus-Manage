@@ -122,7 +122,9 @@ class _ChannelPageState extends State<ChannelPage> {
       if (existing == null) {
         await api.createChannel(channel);
       } else {
-        await api.updateChannel(channel);
+        // Phase 1.1: Send incremental update (only changed fields)
+        final request = ChannelUpdateRequest.fromDiff(existing, channel);
+        await api.updateChannel(request);
       }
       await _loadChannels();
     } catch (e) {

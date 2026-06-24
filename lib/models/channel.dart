@@ -1,5 +1,58 @@
 import 'package:octopusmanage/utils/parse_utils.dart';
 
+/// Proxy usage mode for a channel.
+enum ProxyUsageMode {
+  direct,
+  system,
+  pool,
+  inherit;
+
+  static ProxyUsageMode fromString(String value) {
+    return ProxyUsageMode.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => ProxyUsageMode.direct,
+    );
+  }
+}
+
+/// Request rewrite configuration for a channel.
+class RequestRewriteConfig {
+  final bool enabled;
+  final String? promptPrefix;
+  final String? promptSuffix;
+  final String? systemMessage;
+
+  const RequestRewriteConfig({
+    this.enabled = false,
+    this.promptPrefix,
+    this.promptSuffix,
+    this.systemMessage,
+  });
+
+  factory RequestRewriteConfig.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return const RequestRewriteConfig();
+    return RequestRewriteConfig(
+      enabled: parseBool(json['enabled']),
+      promptPrefix: json['prompt_prefix'] == null
+          ? null
+          : parseString(json['prompt_prefix']),
+      promptSuffix: json['prompt_suffix'] == null
+          ? null
+          : parseString(json['prompt_suffix']),
+      systemMessage: json['system_message'] == null
+          ? null
+          : parseString(json['system_message']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'enabled': enabled,
+        if (promptPrefix != null) 'prompt_prefix': promptPrefix,
+        if (promptSuffix != null) 'prompt_suffix': promptSuffix,
+        if (systemMessage != null) 'system_message': systemMessage,
+      };
+}
+
 class Channel {
   final int id;
   final String name;
@@ -18,6 +71,15 @@ class Channel {
   final StatsChannel? stats;
   final String? matchRegex;
 
+  // Phase 2.4: New fields
+  final int? groupId;
+  final ProxyUsageMode proxyMode;
+  final int? proxyConfigId;
+  final bool skipModelTest;
+  final RequestRewriteConfig? requestRewrite;
+  final bool managed;
+  final String? managedSource;
+
   Channel({
     required this.id,
     required this.name,
@@ -35,6 +97,13 @@ class Channel {
     this.channelProxy,
     this.stats,
     this.matchRegex,
+    this.groupId,
+    this.proxyMode = ProxyUsageMode.direct,
+    this.proxyConfigId,
+    this.skipModelTest = false,
+    this.requestRewrite,
+    this.managed = false,
+    this.managedSource,
   });
 
   factory Channel.fromJson(Map<String, dynamic> json) {
@@ -67,6 +136,22 @@ class Channel {
       matchRegex: json['match_regex'] == null
           ? null
           : parseString(json['match_regex']),
+      // Phase 2.4 new fields
+      groupId: json['group_id'] == null ? null : parseInt(json['group_id']),
+      proxyMode: ProxyUsageMode.fromString(
+        parseString(json['proxy_mode'], fallback: 'direct'),
+      ),
+      proxyConfigId: json['proxy_config_id'] == null
+          ? null
+          : parseInt(json['proxy_config_id']),
+      skipModelTest: parseBool(json['skip_model_test']),
+      requestRewrite: RequestRewriteConfig.fromJson(
+        parseJsonMap(json['request_rewrite']),
+      ),
+      managed: parseBool(json['managed']),
+      managedSource: json['managed_source'] == null
+          ? null
+          : parseString(json['managed_source']),
     );
   }
 
@@ -87,6 +172,14 @@ class Channel {
       if (paramOverride != null) 'param_override': paramOverride,
       if (channelProxy != null) 'channel_proxy': channelProxy,
       if (matchRegex != null) 'match_regex': matchRegex,
+      // Phase 2.4 new fields
+      if (groupId != null) 'group_id': groupId,
+      'proxy_mode': proxyMode.name,
+      if (proxyConfigId != null) 'proxy_config_id': proxyConfigId,
+      'skip_model_test': skipModelTest,
+      if (requestRewrite != null) 'request_rewrite': requestRewrite!.toJson(),
+      'managed': managed,
+      if (managedSource != null) 'managed_source': managedSource,
     };
   }
 }
@@ -94,17 +187,25 @@ class Channel {
 class BaseUrl {
   final String url;
   final int delay;
+  final String? suffixMode;
 
-  BaseUrl({required this.url, this.delay = 0});
+  BaseUrl({required this.url, this.delay = 0, this.suffixMode});
 
   factory BaseUrl.fromJson(Map<String, dynamic> json) {
     return BaseUrl(
       url: parseString(json['url']),
       delay: parseInt(json['delay']),
+      suffixMode: json['suffix_mode'] == null
+          ? null
+          : parseString(json['suffix_mode']),
     );
   }
 
-  Map<String, dynamic> toJson() => {'url': url, 'delay': delay};
+  Map<String, dynamic> toJson() => {
+        'url': url,
+        'delay': delay,
+        if (suffixMode != null) 'suffix_mode': suffixMode,
+      };
 }
 
 class CustomHeader {
@@ -214,4 +315,128 @@ class StatsChannel {
     'request_success': requestSuccess,
     'request_failed': requestFailed,
   };
+}
+
+/// Incremental update request for a channel.
+/// Only includes fields that have changed from the previous state.
+class ChannelUpdateRequest {
+  final int id;
+  final String? name;
+  final int? type;
+  final bool? enabled;
+  final List<BaseUrl>? baseUrls;
+  final List<ChannelKey>? keys;
+  final String? model;
+  final String? customModel;
+  final bool? proxy;
+  final bool? autoSync;
+  final int? autoGroup;
+  final List<CustomHeader>? customHeader;
+  final String? paramOverride;
+  final String? channelProxy;
+  final String? matchRegex;
+  final int? groupId;
+  final ProxyUsageMode? proxyMode;
+  final int? proxyConfigId;
+  final bool? skipModelTest;
+  final RequestRewriteConfig? requestRewrite;
+  final bool? managed;
+  final String? managedSource;
+
+  const ChannelUpdateRequest({
+    required this.id,
+    this.name,
+    this.type,
+    this.enabled,
+    this.baseUrls,
+    this.keys,
+    this.model,
+    this.customModel,
+    this.proxy,
+    this.autoSync,
+    this.autoGroup,
+    this.customHeader,
+    this.paramOverride,
+    this.channelProxy,
+    this.matchRegex,
+    this.groupId,
+    this.proxyMode,
+    this.proxyConfigId,
+    this.skipModelTest,
+    this.requestRewrite,
+    this.managed,
+    this.managedSource,
+  });
+
+  /// Creates an update request by diffing [previous] and [next] Channel states.
+  /// Only changed fields are included in the resulting request.
+  factory ChannelUpdateRequest.fromDiff(Channel previous, Channel next) {
+    return ChannelUpdateRequest(
+      id: next.id,
+      name: previous.name != next.name ? next.name : null,
+      type: previous.type != next.type ? next.type : null,
+      enabled: previous.enabled != next.enabled ? next.enabled : null,
+      baseUrls: !_listEquals(previous.baseUrls, next.baseUrls, (b) => '${b.url}:${b.delay}:${b.suffixMode}')
+          ? next.baseUrls
+          : null,
+      keys: !_listEquals(previous.keys, next.keys, (k) => '${k.id}:${k.channelKey}:${k.enabled}:${k.remark}')
+          ? next.keys
+          : null,
+      model: previous.model != next.model ? next.model : null,
+      customModel: previous.customModel != next.customModel ? next.customModel : null,
+      proxy: previous.proxy != next.proxy ? next.proxy : null,
+      autoSync: previous.autoSync != next.autoSync ? next.autoSync : null,
+      autoGroup: previous.autoGroup != next.autoGroup ? next.autoGroup : null,
+      customHeader: !_listEquals(previous.customHeader, next.customHeader, (h) => '${h.headerKey}:${h.headerValue}')
+          ? next.customHeader
+          : null,
+      paramOverride: previous.paramOverride != next.paramOverride ? next.paramOverride : null,
+      channelProxy: previous.channelProxy != next.channelProxy ? next.channelProxy : null,
+      matchRegex: previous.matchRegex != next.matchRegex ? next.matchRegex : null,
+      groupId: previous.groupId != next.groupId ? next.groupId : null,
+      proxyMode: previous.proxyMode != next.proxyMode ? next.proxyMode : null,
+      proxyConfigId: previous.proxyConfigId != next.proxyConfigId ? next.proxyConfigId : null,
+      skipModelTest: previous.skipModelTest != next.skipModelTest ? next.skipModelTest : null,
+      requestRewrite: previous.requestRewrite?.toJson().toString() != next.requestRewrite?.toJson().toString()
+          ? next.requestRewrite
+          : null,
+      managed: previous.managed != next.managed ? next.managed : null,
+      managedSource: previous.managedSource != next.managedSource ? next.managedSource : null,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      if (name != null) 'name': name,
+      if (type != null) 'type': type,
+      if (enabled != null) 'enabled': enabled,
+      if (baseUrls != null) 'base_urls': baseUrls!.map((e) => e.toJson()).toList(),
+      if (keys != null) 'keys': keys!.map((e) => e.toJson()).toList(),
+      if (model != null) 'model': model,
+      if (customModel != null) 'custom_model': customModel,
+      if (proxy != null) 'proxy': proxy,
+      if (autoSync != null) 'auto_sync': autoSync,
+      if (autoGroup != null) 'auto_group': autoGroup,
+      if (customHeader != null) 'custom_header': customHeader!.map((e) => e.toJson()).toList(),
+      if (paramOverride != null) 'param_override': paramOverride,
+      if (channelProxy != null) 'channel_proxy': channelProxy,
+      if (matchRegex != null) 'match_regex': matchRegex,
+      if (groupId != null) 'group_id': groupId,
+      if (proxyMode != null) 'proxy_mode': proxyMode!.name,
+      if (proxyConfigId != null) 'proxy_config_id': proxyConfigId,
+      if (skipModelTest != null) 'skip_model_test': skipModelTest,
+      if (requestRewrite != null) 'request_rewrite': requestRewrite!.toJson(),
+      if (managed != null) 'managed': managed,
+      if (managedSource != null) 'managed_source': managedSource,
+    };
+  }
+
+  static bool _listEquals<T>(List<T> a, List<T> b, String Function(T) key) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (key(a[i]) != key(b[i])) return false;
+    }
+    return true;
+  }
 }

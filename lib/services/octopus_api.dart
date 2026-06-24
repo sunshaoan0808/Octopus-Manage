@@ -142,10 +142,10 @@ class OctopusApi {
     return Channel.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
-  Future<Channel> updateChannel(Channel channel) async {
+  Future<Channel> updateChannel(ChannelUpdateRequest request) async {
     final res = await _api.post(
       '/api/v1/channel/update',
-      body: channel.toJson(),
+      body: request.toJson(),
     );
     return Channel.fromJson(parseJsonMap(res['data']) ?? {});
   }
