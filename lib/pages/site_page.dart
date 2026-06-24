@@ -250,7 +250,9 @@ class _SitePageState extends State<SitePage> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = context.watch<AppProvider>().loc;
+    final provider = context.watch<AppProvider>();
+    final loc = provider.loc;
+    final canEdit = provider.hasPermission(Permissions.edit);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isCompact = Responsive.isCompact(context);
@@ -319,17 +321,19 @@ class _SitePageState extends State<SitePage> {
                       icon: CupertinoIcons.globe,
                       title: loc.t('no_sites'),
                       subtitle: loc.t('create_first_site'),
-                      action: CupertinoButton.filled(
-                        onPressed: () => _openSiteEditor(),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(CupertinoIcons.add, size: 18),
-                            const SizedBox(width: 4),
-                            Text(loc.t('create_site')),
-                          ],
-                        ),
-                      ),
+                      action: canEdit
+                          ? CupertinoButton.filled(
+                              onPressed: () => _openSiteEditor(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(CupertinoIcons.add, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(loc.t('create_site')),
+                                ],
+                              ),
+                            )
+                          : null,
                     ),
                   )
                 else ...[
@@ -423,9 +427,12 @@ class _SitePageState extends State<SitePage> {
                             platformColor: _platformColor(site.platform),
                             loc: loc,
                             onTap: () => _openSiteDetail(site),
-                            onToggle: () => _toggleEnabled(site),
+                            onToggle: canEdit
+                                ? () => _toggleEnabled(site)
+                                : () {},
                             onEdit: () => _openSiteEditor(existing: site),
                             onDelete: () => _deleteSite(site, loc),
+                            canEdit: canEdit,
                             onArchive: site.status != 'archived'
                                 ? () => _archiveSite(site, loc)
                                 : null,
@@ -441,7 +448,7 @@ class _SitePageState extends State<SitePage> {
                 ],
               ],
             ),
-            if (!_loading && _sites.isNotEmpty)
+            if (!_loading && _sites.isNotEmpty && canEdit)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,
@@ -533,6 +540,7 @@ class _SiteCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onArchive;
   final VoidCallback? onRestore;
+  final bool canEdit;
 
   const _SiteCard({
     required this.site,
@@ -546,6 +554,7 @@ class _SiteCard extends StatelessWidget {
     required this.onDelete,
     this.onArchive,
     this.onRestore,
+    this.canEdit = true,
   });
 
   @override
@@ -572,7 +581,7 @@ class _SiteCard extends StatelessWidget {
               children: [
                 CupertinoSwitch(
                   value: site.enabled,
-                  onChanged: (_) => onToggle(),
+                  onChanged: canEdit ? (_) => onToggle() : null,
                 ),
                 const SizedBox(width: AppTheme.spacingSm),
                 Expanded(
@@ -617,23 +626,25 @@ class _SiteCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: AppTheme.spacingMd),
-                GestureDetector(
-                  onTap: onEdit,
-                  child: Icon(
-                    CupertinoIcons.pencil,
-                    size: 20,
-                    color: colorScheme.primary,
+                if (canEdit) ...[
+                  GestureDetector(
+                    onTap: onEdit,
+                    child: Icon(
+                      CupertinoIcons.pencil,
+                      size: 20,
+                      color: colorScheme.primary,
+                    ),
                   ),
-                ),
-                const SizedBox(width: AppTheme.spacingMd),
-                GestureDetector(
-                  onTap: onDelete,
-                  child: Icon(
-                    CupertinoIcons.delete,
-                    size: 20,
-                    color: colorScheme.error,
+                  const SizedBox(width: AppTheme.spacingMd),
+                  GestureDetector(
+                    onTap: onDelete,
+                    child: Icon(
+                      CupertinoIcons.delete,
+                      size: 20,
+                      color: colorScheme.error,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
             const SizedBox(height: AppTheme.spacingMd),

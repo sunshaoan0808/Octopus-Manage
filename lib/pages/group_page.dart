@@ -496,7 +496,9 @@ class _GroupPageState extends State<GroupPage> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = context.watch<AppProvider>().loc;
+    final provider = context.watch<AppProvider>();
+    final loc = provider.loc;
+    final canEdit = provider.hasPermission(Permissions.edit);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isCompact = Responsive.isCompact(context);
@@ -566,35 +568,38 @@ class _GroupPageState extends State<GroupPage> {
                       action: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          CupertinoButton.filled(
-                            onPressed: () => _showGroupEditor(),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(CupertinoIcons.add, size: 18),
-                                const SizedBox(width: 4),
-                                Text(loc.t('create_group')),
-                              ],
+                          if (canEdit)
+                            CupertinoButton.filled(
+                              onPressed: () => _showGroupEditor(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(CupertinoIcons.add, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(loc.t('create_group')),
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: AppTheme.spacingSm),
-                          CupertinoButton(
-                            onPressed: _startingTableAIRoute
-                                ? null
-                                : () => _startAIRoute(loc),
-                            child: _startingTableAIRoute
-                                ? const CupertinoActivityIndicator()
-                                : Text(loc.t('ai_route_generate_table')),
-                          ),
-                          const SizedBox(height: AppTheme.spacingSm),
-                          CupertinoButton(
-                            onPressed: _autoGrouping
-                                ? null
-                                : () => _autoGroupModels(loc),
-                            child: _autoGrouping
-                                ? const CupertinoActivityIndicator()
-                                : Text(loc.t('auto_group_models')),
-                          ),
+                          if (canEdit) ...[
+                            const SizedBox(height: AppTheme.spacingSm),
+                            CupertinoButton(
+                              onPressed: _startingTableAIRoute
+                                  ? null
+                                  : () => _startAIRoute(loc),
+                              child: _startingTableAIRoute
+                                  ? const CupertinoActivityIndicator()
+                                  : Text(loc.t('ai_route_generate_table')),
+                            ),
+                            const SizedBox(height: AppTheme.spacingSm),
+                            CupertinoButton(
+                              onPressed: _autoGrouping
+                                  ? null
+                                  : () => _autoGroupModels(loc),
+                              child: _autoGrouping
+                                  ? const CupertinoActivityIndicator()
+                                  : Text(loc.t('auto_group_models')),
+                            ),
+                          ],
                         ],
                       ),
                     ),
@@ -697,24 +702,26 @@ class _GroupPageState extends State<GroupPage> {
                                           ),
                                   ),
                                   const SizedBox(width: AppTheme.spacingMd),
-                                  GestureDetector(
-                                    onTap: () =>
-                                        _showGroupEditor(existing: group),
-                                    child: Icon(
-                                      CupertinoIcons.pencil,
-                                      size: 20,
-                                      color: colorScheme.primary,
+                                  if (canEdit) ...[
+                                    GestureDetector(
+                                      onTap: () =>
+                                          _showGroupEditor(existing: group),
+                                      child: Icon(
+                                        CupertinoIcons.pencil,
+                                        size: 20,
+                                        color: colorScheme.primary,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: AppTheme.spacingMd),
-                                  GestureDetector(
-                                    onTap: () => _deleteGroup(group, loc),
-                                    child: Icon(
-                                      CupertinoIcons.delete,
-                                      size: 20,
-                                      color: colorScheme.error,
+                                    const SizedBox(width: AppTheme.spacingMd),
+                                    GestureDetector(
+                                      onTap: () => _deleteGroup(group, loc),
+                                      child: Icon(
+                                        CupertinoIcons.delete,
+                                        size: 20,
+                                        color: colorScheme.error,
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(height: AppTheme.spacingMd),
@@ -764,7 +771,7 @@ class _GroupPageState extends State<GroupPage> {
                   ),
               ],
             ),
-            if (!_loading && _groups.isNotEmpty)
+            if (!_loading && _groups.isNotEmpty && canEdit)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,

@@ -352,7 +352,9 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = context.watch<AppProvider>().loc;
+    final provider = context.watch<AppProvider>();
+    final loc = provider.loc;
+    final canEdit = provider.hasPermission(Permissions.edit);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -386,17 +388,19 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
                       icon: CupertinoIcons.tag,
                       title: loc.t('no_api_keys'),
                       subtitle: loc.t('create_first_api_key'),
-                      action: CupertinoButton.filled(
-                        onPressed: () => _showApiKeyDialog(),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(CupertinoIcons.add, size: 18),
-                            const SizedBox(width: 4),
-                            Text(loc.t('create_api_key')),
-                          ],
-                        ),
-                      ),
+                      action: canEdit
+                          ? CupertinoButton.filled(
+                              onPressed: () => _showApiKeyDialog(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(CupertinoIcons.add, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(loc.t('create_api_key')),
+                                ],
+                              ),
+                            )
+                          : null,
                     ),
                   )
                 else
@@ -414,7 +418,9 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
                           ),
                           leading: CupertinoSwitch(
                             value: key.enabled,
-                            onChanged: (_) => _toggleEnabled(key),
+                            onChanged: canEdit
+                                ? (_) => _toggleEnabled(key)
+                                : null,
                           ),
                           title: Text(
                             key.name,
@@ -463,23 +469,25 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              GestureDetector(
-                                onTap: () => _showApiKeyDialog(existing: key),
-                                child: Icon(
-                                  CupertinoIcons.pencil,
-                                  size: 20,
-                                  color: colorScheme.primary,
+                              if (canEdit) ...[
+                                GestureDetector(
+                                  onTap: () => _showApiKeyDialog(existing: key),
+                                  child: Icon(
+                                    CupertinoIcons.pencil,
+                                    size: 20,
+                                    color: colorScheme.primary,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: AppTheme.spacingMd),
-                              GestureDetector(
-                                onTap: () => _deleteKey(key, loc),
-                                child: Icon(
-                                  CupertinoIcons.delete,
-                                  size: 20,
-                                  color: colorScheme.error,
+                                const SizedBox(width: AppTheme.spacingMd),
+                                GestureDetector(
+                                  onTap: () => _deleteKey(key, loc),
+                                  child: Icon(
+                                    CupertinoIcons.delete,
+                                    size: 20,
+                                    color: colorScheme.error,
+                                  ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         );
@@ -488,7 +496,7 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
                   ),
               ],
             ),
-            if (!_loading)
+            if (!_loading && canEdit)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,

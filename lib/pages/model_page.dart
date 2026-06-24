@@ -355,7 +355,9 @@ class _ModelPageState extends State<ModelPage> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = context.watch<AppProvider>().loc;
+    final provider = context.watch<AppProvider>();
+    final loc = provider.loc;
+    final canEdit = provider.hasPermission(Permissions.edit);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -420,17 +422,19 @@ class _ModelPageState extends State<ModelPage> {
                       icon: CupertinoIcons.cube_box,
                       title: loc.t('no_models'),
                       subtitle: loc.t('create_first_model'),
-                      action: CupertinoButton.filled(
-                        onPressed: () => _showModelDialog(loc: loc),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(CupertinoIcons.add, size: 18),
-                            const SizedBox(width: 4),
-                            Text(loc.t('create_model')),
-                          ],
-                        ),
-                      ),
+                      action: canEdit
+                          ? CupertinoButton.filled(
+                              onPressed: () => _showModelDialog(loc: loc),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(CupertinoIcons.add, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(loc.t('create_model')),
+                                ],
+                              ),
+                            )
+                          : null,
                     ),
                   )
                 else
@@ -481,26 +485,28 @@ class _ModelPageState extends State<ModelPage> {
                                       ],
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: () => _showModelDialog(
-                                      existing: model,
-                                      loc: loc,
+                                  if (canEdit) ...[
+                                    GestureDetector(
+                                      onTap: () => _showModelDialog(
+                                        existing: model,
+                                        loc: loc,
+                                      ),
+                                      child: Icon(
+                                        CupertinoIcons.pencil,
+                                        size: 20,
+                                        color: colorScheme.primary,
+                                      ),
                                     ),
-                                    child: Icon(
-                                      CupertinoIcons.pencil,
-                                      size: 20,
-                                      color: colorScheme.primary,
+                                    const SizedBox(width: AppTheme.spacingMd),
+                                    GestureDetector(
+                                      onTap: () => _deleteModel(model, loc),
+                                      child: Icon(
+                                        CupertinoIcons.delete,
+                                        size: 20,
+                                        color: colorScheme.error,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: AppTheme.spacingMd),
-                                  GestureDetector(
-                                    onTap: () => _deleteModel(model, loc),
-                                    child: Icon(
-                                      CupertinoIcons.delete,
-                                      size: 20,
-                                      color: colorScheme.error,
-                                    ),
-                                  ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(height: AppTheme.spacingMd),
@@ -574,7 +580,7 @@ class _ModelPageState extends State<ModelPage> {
                   ),
               ],
             ),
-            if (!_loading && _models.isNotEmpty)
+            if (!_loading && _models.isNotEmpty && canEdit)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,

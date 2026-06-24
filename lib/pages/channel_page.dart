@@ -186,7 +186,9 @@ class _ChannelPageState extends State<ChannelPage> {
 
   @override
   Widget build(BuildContext context) {
-    final loc = context.watch<AppProvider>().loc;
+    final provider = context.watch<AppProvider>();
+    final loc = provider.loc;
+    final canEdit = provider.hasPermission(Permissions.edit);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
@@ -230,17 +232,19 @@ class _ChannelPageState extends State<ChannelPage> {
                       icon: CupertinoIcons.arrow_3_trianglepath,
                       title: loc.t('no_channels'),
                       subtitle: loc.t('create_first_channel'),
-                      action: CupertinoButton.filled(
-                        onPressed: () => _showChannelEditor(),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(CupertinoIcons.add, size: 18),
-                            const SizedBox(width: 4),
-                            Text(loc.t('create_channel')),
-                          ],
-                        ),
-                      ),
+                      action: canEdit
+                          ? CupertinoButton.filled(
+                              onPressed: () => _showChannelEditor(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(CupertinoIcons.add, size: 18),
+                                  const SizedBox(width: 4),
+                                  Text(loc.t('create_channel')),
+                                ],
+                              ),
+                            )
+                          : null,
                     ),
                   )
                 else
@@ -270,7 +274,9 @@ class _ChannelPageState extends State<ChannelPage> {
                                 children: [
                                   CupertinoSwitch(
                                     value: channel.enabled,
-                                    onChanged: (_) => _toggleEnabled(channel),
+                                    onChanged: canEdit
+                                        ? (_) => _toggleEnabled(channel)
+                                        : null,
                                   ),
                                   const SizedBox(width: AppTheme.spacingSm),
                                   Expanded(
@@ -319,25 +325,27 @@ class _ChannelPageState extends State<ChannelPage> {
                                       ],
                                     ),
                                   ),
-                                  const SizedBox(width: AppTheme.spacingMd),
-                                  GestureDetector(
-                                    onTap: () =>
-                                        _showChannelEditor(existing: channel),
-                                    child: Icon(
-                                      CupertinoIcons.pencil,
-                                      size: 20,
-                                      color: colorScheme.primary,
+                                   const SizedBox(width: AppTheme.spacingMd),
+                                  if (canEdit) ...[
+                                    GestureDetector(
+                                      onTap: () =>
+                                          _showChannelEditor(existing: channel),
+                                      child: Icon(
+                                        CupertinoIcons.pencil,
+                                        size: 20,
+                                        color: colorScheme.primary,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: AppTheme.spacingMd),
-                                  GestureDetector(
-                                    onTap: () => _deleteChannel(channel, loc),
-                                    child: Icon(
-                                      CupertinoIcons.delete,
-                                      size: 20,
-                                      color: colorScheme.error,
+                                    const SizedBox(width: AppTheme.spacingMd),
+                                    GestureDetector(
+                                      onTap: () => _deleteChannel(channel, loc),
+                                      child: Icon(
+                                        CupertinoIcons.delete,
+                                        size: 20,
+                                        color: colorScheme.error,
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
                               const SizedBox(height: AppTheme.spacingMd),
@@ -403,7 +411,7 @@ class _ChannelPageState extends State<ChannelPage> {
                   ),
               ],
             ),
-            if (!_loading)
+            if (!_loading && canEdit)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,

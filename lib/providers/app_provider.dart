@@ -11,6 +11,45 @@ const kWaitTimeUnitKey = 'wait_time_unit';
 const kAutoRefreshEnabledKey = 'auto_refresh_enabled';
 const kAutoRefreshIntervalSecondsKey = 'auto_refresh_interval_seconds';
 
+/// Permission constants matching server permissions.go
+class Permissions {
+  static const String view = 'view';
+  static const String edit = 'edit';
+  static const String delete = 'delete';
+  static const String admin = 'admin';
+  static const String manageUsers = 'manage_users';
+  static const String manageChannels = 'manage_channels';
+  static const String manageGroups = 'manage_groups';
+  static const String manageKeys = 'manage_keys';
+  static const String manageSettings = 'manage_settings';
+}
+
+/// Role → allowed permission sets
+const _rolePermissions = <String, Set<String>>{
+  'admin': {
+    Permissions.view,
+    Permissions.edit,
+    Permissions.delete,
+    Permissions.admin,
+    Permissions.manageUsers,
+    Permissions.manageChannels,
+    Permissions.manageGroups,
+    Permissions.manageKeys,
+    Permissions.manageSettings,
+  },
+  'editor': {
+    Permissions.view,
+    Permissions.edit,
+    Permissions.delete,
+    Permissions.manageChannels,
+    Permissions.manageGroups,
+    Permissions.manageKeys,
+  },
+  'viewer': {
+    Permissions.view,
+  },
+};
+
 class AppProvider extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   late final OctopusApi api;
@@ -24,6 +63,7 @@ class AppProvider extends ChangeNotifier {
   WaitTimeUnit _waitTimeUnit = WaitTimeUnit.auto;
   bool _autoRefreshEnabled = false;
   int _autoRefreshIntervalSeconds = 30;
+  String _userRole = 'admin';
 
   bool get initialized => _initialized;
   bool get loading => _loading;
@@ -37,10 +77,17 @@ class AppProvider extends ChangeNotifier {
   WaitTimeUnit get waitTimeUnit => _waitTimeUnit;
   bool get autoRefreshEnabled => _autoRefreshEnabled;
   int get autoRefreshIntervalSeconds => _autoRefreshIntervalSeconds;
+  String get userRole => _userRole;
 
   Locale get flutterLocale =>
       AppLocalizations.localeMap[_locale] ?? const Locale('en');
   AppLocalizations get loc => AppLocalizations(_locale);
+
+  /// Check if the current user role has a specific permission.
+  bool hasPermission(String permission) {
+    final perms = _rolePermissions[_userRole] ?? _rolePermissions['viewer']!;
+    return perms.contains(permission);
+  }
 
   AppProvider() {
     _apiService.onUnauthorized = () {
@@ -129,6 +176,7 @@ class AppProvider extends ChangeNotifier {
       final token = parseString(data['token']);
       if (token.isNotEmpty) {
         await _apiService.setToken(token);
+        _userRole = parseString(data['role'], fallback: 'admin');
         _bootstrapped = true;
         _error = null;
         notifyListeners();
@@ -179,6 +227,7 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     await _apiService.logout();
+    _userRole = 'admin';
     _error = null;
     notifyListeners();
   }
