@@ -463,6 +463,11 @@ class OctopusApi {
     return OpsSystemSummary.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
+  Future<OpsTelemetrySummary> getOpsTelemetry() async {
+    final res = await _api.get('/api/v1/ops/telemetry');
+    return OpsTelemetrySummary.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
   // ====== Analytics ======
   Future<AnalyticsOverview> getAnalyticsOverview({String range = '7d'}) async {
     final res = await _api.get(

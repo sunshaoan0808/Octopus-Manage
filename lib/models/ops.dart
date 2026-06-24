@@ -145,6 +145,14 @@ class OpsSystemSummary {
   final int groupCount;
   final int apiKeyCount;
   final int aiRouteServiceCount;
+  final int relayRetryCount;
+  final bool circuitBreakerEnabled;
+  final int circuitBreakerThreshold;
+  final int circuitBreakerRecoveryMs;
+  final bool responseFilterEnabled;
+  final int responseFilterRules;
+  final bool aiRouteEnabled;
+  final String aiRouteDefaultStrategy;
 
   OpsSystemSummary({
     this.version = '',
@@ -162,6 +170,14 @@ class OpsSystemSummary {
     this.groupCount = 0,
     this.apiKeyCount = 0,
     this.aiRouteServiceCount = 0,
+    this.relayRetryCount = 0,
+    this.circuitBreakerEnabled = false,
+    this.circuitBreakerThreshold = 0,
+    this.circuitBreakerRecoveryMs = 0,
+    this.responseFilterEnabled = false,
+    this.responseFilterRules = 0,
+    this.aiRouteEnabled = false,
+    this.aiRouteDefaultStrategy = '',
   });
 
   factory OpsSystemSummary.fromJson(Map<String, dynamic> json) {
@@ -183,6 +199,231 @@ class OpsSystemSummary {
       groupCount: parseInt(json['group_count']),
       apiKeyCount: parseInt(json['api_key_count']),
       aiRouteServiceCount: parseInt(json['ai_route_service_count']),
+      relayRetryCount: parseInt(json['relay_retry_count']),
+      circuitBreakerEnabled: parseBool(json['circuit_breaker_enabled']),
+      circuitBreakerThreshold: parseInt(json['circuit_breaker_threshold']),
+      circuitBreakerRecoveryMs: parseInt(json['circuit_breaker_recovery_ms']),
+      responseFilterEnabled: parseBool(json['response_filter_enabled']),
+      responseFilterRules: parseInt(json['response_filter_rules']),
+      aiRouteEnabled: parseBool(json['ai_route_enabled']),
+      aiRouteDefaultStrategy: parseString(json['ai_route_default_strategy']),
+    );
+  }
+}
+
+// ====== Telemetry Models ======
+
+class OpsTelemetrySummary {
+  final OpsHeroMetrics heroMetrics;
+  final OpsRuntimeSignals runtimeSignals;
+  final OpsDatabaseHealth databaseHealth;
+  final OpsSessionQuotaActivity sessionQuotaActivity;
+  final OpsPromptCache promptCache;
+  final OpsProviderHealth providerHealth;
+
+  OpsTelemetrySummary({
+    OpsHeroMetrics? heroMetrics,
+    OpsRuntimeSignals? runtimeSignals,
+    OpsDatabaseHealth? databaseHealth,
+    OpsSessionQuotaActivity? sessionQuotaActivity,
+    OpsPromptCache? promptCache,
+    OpsProviderHealth? providerHealth,
+  })  : heroMetrics = heroMetrics ?? OpsHeroMetrics(),
+        runtimeSignals = runtimeSignals ?? OpsRuntimeSignals(),
+        databaseHealth = databaseHealth ?? OpsDatabaseHealth(),
+        sessionQuotaActivity = sessionQuotaActivity ?? OpsSessionQuotaActivity(),
+        promptCache = promptCache ?? OpsPromptCache(),
+        providerHealth = providerHealth ?? OpsProviderHealth();
+
+  factory OpsTelemetrySummary.fromJson(Map<String, dynamic> json) {
+    return OpsTelemetrySummary(
+      heroMetrics: OpsHeroMetrics.fromJson(parseJsonMap(json['hero_metrics']) ?? {}),
+      runtimeSignals: OpsRuntimeSignals.fromJson(parseJsonMap(json['runtime_signals']) ?? {}),
+      databaseHealth: OpsDatabaseHealth.fromJson(parseJsonMap(json['database_health']) ?? {}),
+      sessionQuotaActivity: OpsSessionQuotaActivity.fromJson(parseJsonMap(json['session_quota_activity']) ?? {}),
+      promptCache: OpsPromptCache.fromJson(parseJsonMap(json['prompt_cache']) ?? {}),
+      providerHealth: OpsProviderHealth.fromJson(parseJsonMap(json['provider_health']) ?? {}),
+    );
+  }
+}
+
+class OpsHeroMetrics {
+  final String uptime;
+  final int totalRequests;
+  final double avgLatency;
+  final double errorRate;
+  final int activeConnections;
+  final double memoryUsageMB;
+
+  OpsHeroMetrics({
+    this.uptime = '',
+    this.totalRequests = 0,
+    this.avgLatency = 0,
+    this.errorRate = 0,
+    this.activeConnections = 0,
+    this.memoryUsageMB = 0,
+  });
+
+  factory OpsHeroMetrics.fromJson(Map<String, dynamic> json) {
+    return OpsHeroMetrics(
+      uptime: parseString(json['uptime']),
+      totalRequests: parseInt(json['total_requests']),
+      avgLatency: parseDouble(json['avg_latency']),
+      errorRate: parseDouble(json['error_rate']),
+      activeConnections: parseInt(json['active_connections']),
+      memoryUsageMB: parseDouble(json['memory_usage_mb']),
+    );
+  }
+}
+
+class OpsRuntimeSignals {
+  final int goroutineCount;
+  final double gcPauseMs;
+  final double heapAllocMB;
+  final double heapInUseMB;
+
+  OpsRuntimeSignals({
+    this.goroutineCount = 0,
+    this.gcPauseMs = 0,
+    this.heapAllocMB = 0,
+    this.heapInUseMB = 0,
+  });
+
+  factory OpsRuntimeSignals.fromJson(Map<String, dynamic> json) {
+    return OpsRuntimeSignals(
+      goroutineCount: parseInt(json['goroutine_count']),
+      gcPauseMs: parseDouble(json['gc_pause_ms']),
+      heapAllocMB: parseDouble(json['heap_alloc_mb']),
+      heapInUseMB: parseDouble(json['heap_in_use_mb']),
+    );
+  }
+}
+
+class OpsDatabaseHealth {
+  final String type;
+  final bool connected;
+  final double latencyMs;
+  final int activeConnections;
+  final int maxConnections;
+
+  OpsDatabaseHealth({
+    this.type = '',
+    this.connected = false,
+    this.latencyMs = 0,
+    this.activeConnections = 0,
+    this.maxConnections = 0,
+  });
+
+  factory OpsDatabaseHealth.fromJson(Map<String, dynamic> json) {
+    return OpsDatabaseHealth(
+      type: parseString(json['type']),
+      connected: parseBool(json['connected']),
+      latencyMs: parseDouble(json['latency_ms']),
+      activeConnections: parseInt(json['active_connections']),
+      maxConnections: parseInt(json['max_connections']),
+    );
+  }
+}
+
+class OpsSessionQuotaActivity {
+  final int activeSessions;
+  final int quotaExhaustedCount;
+  final int recentQuotaEvents;
+
+  OpsSessionQuotaActivity({
+    this.activeSessions = 0,
+    this.quotaExhaustedCount = 0,
+    this.recentQuotaEvents = 0,
+  });
+
+  factory OpsSessionQuotaActivity.fromJson(Map<String, dynamic> json) {
+    return OpsSessionQuotaActivity(
+      activeSessions: parseInt(json['active_sessions']),
+      quotaExhaustedCount: parseInt(json['quota_exhausted_count']),
+      recentQuotaEvents: parseInt(json['recent_quota_events']),
+    );
+  }
+}
+
+class OpsPromptCache {
+  final int hits;
+  final int misses;
+  final double hitRate;
+  final int entries;
+  final int maxEntries;
+  final int evictions;
+
+  OpsPromptCache({
+    this.hits = 0,
+    this.misses = 0,
+    this.hitRate = 0,
+    this.entries = 0,
+    this.maxEntries = 0,
+    this.evictions = 0,
+  });
+
+  factory OpsPromptCache.fromJson(Map<String, dynamic> json) {
+    return OpsPromptCache(
+      hits: parseInt(json['hits']),
+      misses: parseInt(json['misses']),
+      hitRate: parseDouble(json['hit_rate']),
+      entries: parseInt(json['entries']),
+      maxEntries: parseInt(json['max_entries']),
+      evictions: parseInt(json['evictions']),
+    );
+  }
+}
+
+class OpsProviderHealth {
+  final int totalProviders;
+  final int healthyProviders;
+  final int degradedProviders;
+  final int downProviders;
+  final List<OpsProviderItem> providers;
+
+  OpsProviderHealth({
+    this.totalProviders = 0,
+    this.healthyProviders = 0,
+    this.degradedProviders = 0,
+    this.downProviders = 0,
+    this.providers = const [],
+  });
+
+  factory OpsProviderHealth.fromJson(Map<String, dynamic> json) {
+    return OpsProviderHealth(
+      totalProviders: parseInt(json['total_providers']),
+      healthyProviders: parseInt(json['healthy_providers']),
+      degradedProviders: parseInt(json['degraded_providers']),
+      downProviders: parseInt(json['down_providers']),
+      providers: parseJsonMapList(json['providers'])
+          .map(OpsProviderItem.fromJson)
+          .toList(),
+    );
+  }
+}
+
+class OpsProviderItem {
+  final String name;
+  final String status;
+  final double latencyMs;
+  final double errorRate;
+  final String lastCheckAt;
+
+  OpsProviderItem({
+    this.name = '',
+    this.status = '',
+    this.latencyMs = 0,
+    this.errorRate = 0,
+    this.lastCheckAt = '',
+  });
+
+  factory OpsProviderItem.fromJson(Map<String, dynamic> json) {
+    return OpsProviderItem(
+      name: parseString(json['name']),
+      status: parseString(json['status']),
+      latencyMs: parseDouble(json['latency_ms']),
+      errorRate: parseDouble(json['error_rate']),
+      lastCheckAt: parseString(json['last_check_at']),
     );
   }
 }
