@@ -12,6 +12,11 @@ class APIKey {
   final int rateLimitTPM;
   final String perModelQuotaJson;
 
+  // Phase 1.2: Security fields
+  final List<String> allowedIps;
+  final List<String> tags;
+  final List<int> excludedChannels;
+
   APIKey({
     this.id = 0,
     required this.name,
@@ -23,6 +28,9 @@ class APIKey {
     this.rateLimitRPM = 0,
     this.rateLimitTPM = 0,
     this.perModelQuotaJson = '',
+    this.allowedIps = const [],
+    this.tags = const [],
+    this.excludedChannels = const [],
   });
 
   factory APIKey.fromJson(Map<String, dynamic> json) {
@@ -37,6 +45,10 @@ class APIKey {
       rateLimitRPM: parseInt(json['rate_limit_rpm']),
       rateLimitTPM: parseInt(json['rate_limit_tpm']),
       perModelQuotaJson: parseString(json['per_model_quota_json']),
+      // Phase 1.2: Security fields
+      allowedIps: _parseStringList(json['allowed_ips']),
+      tags: _parseStringList(json['tags']),
+      excludedChannels: _parseIntList(json['excluded_channels']),
     );
   }
 
@@ -52,6 +64,27 @@ class APIKey {
       'rate_limit_rpm': rateLimitRPM,
       'rate_limit_tpm': rateLimitTPM,
       if (perModelQuotaJson.isNotEmpty) 'per_model_quota_json': perModelQuotaJson,
+      // Phase 1.2: Security fields
+      if (allowedIps.isNotEmpty) 'allowed_ips': allowedIps,
+      if (tags.isNotEmpty) 'tags': tags,
+      if (excludedChannels.isNotEmpty) 'excluded_channels': excludedChannels,
     };
+  }
+
+  static List<String> _parseStringList(dynamic value) {
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    if (value is String && value.isNotEmpty) {
+      return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
+    return [];
+  }
+
+  static List<int> _parseIntList(dynamic value) {
+    if (value is List) {
+      return value.map((e) => parseInt(e)).toList();
+    }
+    return [];
   }
 }

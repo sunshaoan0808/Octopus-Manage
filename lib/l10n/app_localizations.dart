@@ -299,6 +299,16 @@ class AppLocalizations {
       AppLocale.en: 'Per-Model Quota JSON',
       AppLocale.zh: '单模型配额 JSON',
     },
+    // Phase 1.2: Security fields
+    'allowed_ips': {
+      AppLocale.en: 'Allowed IPs (comma-separated)',
+      AppLocale.zh: 'IP 白名单（逗号分隔）',
+    },
+    'tags': {AppLocale.en: 'Tags (comma-separated)', AppLocale.zh: '标签（逗号分隔）'},
+    'excluded_channels': {
+      AppLocale.en: 'Excluded Channel IDs (comma-separated)',
+      AppLocale.zh: '排除渠道 ID（逗号分隔）',
+    },
 
     // Log
     'clear_logs': {AppLocale.en: 'Clear Logs', AppLocale.zh: '清除日志'},

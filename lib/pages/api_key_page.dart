@@ -109,6 +109,16 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
     final perModelQuotaCtl = TextEditingController(
       text: existing?.perModelQuotaJson ?? '',
     );
+    // Phase 1.2: Security field controllers
+    final allowedIpsCtl = TextEditingController(
+      text: existing?.allowedIps.join(', ') ?? '',
+    );
+    final tagsCtl = TextEditingController(
+      text: existing?.tags.join(', ') ?? '',
+    );
+    final excludedChannelsCtl = TextEditingController(
+      text: existing?.excludedChannels.join(', ') ?? '',
+    );
     bool enabled = existing?.enabled ?? true;
 
     final result = await showCupertinoDialog<bool>(
@@ -209,6 +219,38 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
                       ),
                     ),
                     const SizedBox(height: AppTheme.spacingMd),
+                    // Phase 1.2: Security fields
+                    CupertinoTextField(
+                      controller: allowedIpsCtl,
+                      placeholder: loc.t('allowed_ips'),
+                      padding: const EdgeInsets.all(12),
+                      maxLines: 2,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: tagsCtl,
+                      placeholder: loc.t('tags'),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: excludedChannelsCtl,
+                      placeholder: loc.t('excluded_channels'),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -247,6 +289,10 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
     final rpmText = rpmCtl.text;
     final tpmText = tpmCtl.text;
     final perModelQuota = perModelQuotaCtl.text.trim();
+    // Phase 1.2: Security field values
+    final allowedIpsText = allowedIpsCtl.text.trim();
+    final tagsText = tagsCtl.text.trim();
+    final excludedChannelsText = excludedChannelsCtl.text.trim();
 
     nameCtl.dispose();
     maxCostCtl.dispose();
@@ -255,8 +301,15 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
     rpmCtl.dispose();
     tpmCtl.dispose();
     perModelQuotaCtl.dispose();
+    allowedIpsCtl.dispose();
+    tagsCtl.dispose();
+    excludedChannelsCtl.dispose();
 
     if (result != true) return;
+
+    List<String> parseList(String text) {
+      return text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    }
 
     try {
       if (!mounted) return;
@@ -271,6 +324,9 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
         rateLimitRPM: int.tryParse(rpmText) ?? 0,
         rateLimitTPM: int.tryParse(tpmText) ?? 0,
         perModelQuotaJson: perModelQuota,
+        allowedIps: parseList(allowedIpsText),
+        tags: parseList(tagsText),
+        excludedChannels: parseList(excludedChannelsText).map((e) => int.tryParse(e) ?? 0).where((e) => e > 0).toList(),
       );
       if (isEdit) {
         await api.updateApiKey(key);
