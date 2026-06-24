@@ -349,7 +349,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   AppTheme.colorPurple,
                   theme,
                   colorScheme,
-                  'Avg: ${_formatWaitTime(stats.waitTime, loc, waitUnit)}',
+                  'P50: ${stats.latencyP50.toStringAsFixed(0)}ms  P95: ${stats.latencyP95.toStringAsFixed(0)}ms',
                 ),
               ],
             );
