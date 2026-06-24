@@ -23,6 +23,8 @@ class _SitePageState extends State<SitePage> {
   List<Site> _sites = [];
   List<Site> _filteredSites = [];
   bool _loading = true;
+  bool _syncingAll = false;
+  bool _checkingInAll = false;
   String _searchQuery = '';
   String _filterStatus = 'all';
 
@@ -136,6 +138,61 @@ class _SitePageState extends State<SitePage> {
     }
   }
 
+  Future<void> _syncAllSites(AppLocalizations loc) async {
+    if (_syncingAll) return;
+    setState(() => _syncingAll = true);
+    try {
+      final api = context.read<AppProvider>().api;
+      await api.syncAllSites();
+      await _loadSites();
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _syncingAll = false);
+    }
+  }
+
+  Future<void> _checkInAllSites(AppLocalizations loc) async {
+    if (_checkingInAll) return;
+    setState(() => _checkingInAll = true);
+    try {
+      final api = context.read<AppProvider>().api;
+      final results = await api.checkInAllSites();
+      if (mounted) {
+        final successCount =
+            results.where((r) => r.status == 'success').length;
+        if (successCount > 0) {
+          _showMessage(loc.t('site_checkin_all_success'));
+        } else {
+          _showMessage(loc.t('site_already_checked'));
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _checkingInAll = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: Text(context.read<AppProvider>().loc.t('ok')),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+      ),
+    );
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'active':
@@ -215,6 +272,40 @@ class _SitePageState extends State<SitePage> {
                     colorScheme,
                   ).withValues(alpha: 0.85),
                   border: null,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        onPressed: _syncingAll
+                            ? null
+                            : () => _syncAllSites(loc),
+                        child: _syncingAll
+                            ? const CupertinoActivityIndicator(radius: 10)
+                            : Icon(
+                                CupertinoIcons.refresh,
+                                size: 22,
+                                color: colorScheme.primary,
+                              ),
+                      ),
+                      const SizedBox(width: AppTheme.spacingSm),
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        onPressed: _checkingInAll
+                            ? null
+                            : () => _checkInAllSites(loc),
+                        child: _checkingInAll
+                            ? const CupertinoActivityIndicator(radius: 10)
+                            : Icon(
+                                CupertinoIcons.checkmark_seal,
+                                size: 22,
+                                color: colorScheme.primary,
+                              ),
+                      ),
+                    ],
+                  ),
                 ),
                 CupertinoSliverRefreshControl(onRefresh: _loadSites),
                 if (_loading)
@@ -419,6 +510,17 @@ class _SitePageState extends State<SitePage> {
   }
 }
 
+String _formatSyncTime(int timestamp) {
+  if (timestamp <= 0) return '';
+  final dt = DateTime.fromMillisecondsSinceEpoch(timestamp * 1000);
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  if (diff.inMinutes < 1) return 'just now';
+  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+  if (diff.inDays < 1) return '${diff.inHours}h ago';
+  return '${diff.inDays}d ago';
+}
+
 class _SiteCard extends StatelessWidget {
   final Site site;
   final Color statusColor;
@@ -560,6 +662,11 @@ class _SiteCard extends StatelessWidget {
                           ? AppTheme.colorOrange
                           : AppTheme.colorRed,
                 ),
+                if (site.lastSyncAt > 0)
+                  AppInfoChip(
+                    icon: CupertinoIcons.clock,
+                    label: '${loc.t('site_last_sync')}: ${_formatSyncTime(site.lastSyncAt)}',
+                  ),
               ],
             ),
             if (site.status == 'error' && site.errorMessage != null) ...[

@@ -26,16 +26,21 @@ class _SiteDetailPageState extends State<SiteDetailPage>
   List<SiteAccount> _accounts = [];
   List<SiteToken> _tokens = [];
   List<SiteModel> _models = [];
+  List<CheckInRecord> _checkInHistory = [];
+  List<RedemptionRecord> _redemptionHistory = [];
+  final Map<int, BalanceSnapshot> _balances = {};
+  final Map<int, BalancePrediction> _predictions = {};
   bool _loadingAccounts = false;
   bool _loadingTokens = false;
   bool _loadingModels = false;
   bool _syncing = false;
+  bool _checkingIn = false;
 
   @override
   void initState() {
     super.initState();
     _site = widget.site;
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 6, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadTabData(0);
   }
@@ -69,7 +74,10 @@ class _SiteDetailPageState extends State<SiteDetailPage>
         setState(() => _loadingAccounts = true);
         try {
           final data = await api.getSiteAccounts(_site.id);
-          if (mounted) setState(() => _accounts = data);
+          if (mounted) {
+            setState(() => _accounts = data);
+            _loadBalances();
+          }
         } catch (e) {
           if (mounted) await showErrorDialog(context, e.toString());
         } finally {
@@ -100,6 +108,32 @@ class _SiteDetailPageState extends State<SiteDetailPage>
           if (mounted) setState(() => _loadingModels = false);
         }
         break;
+      case 4:
+        // Check-in / Redemption history
+        if (_checkInHistory.isNotEmpty) return;
+        try {
+          final checkins = await api.getCheckInHistory(_site.id);
+          final redeems = await api.getRedemptionHistory(_site.id);
+          if (mounted) {
+            setState(() {
+              _checkInHistory = checkins;
+              _redemptionHistory = redeems;
+            });
+          }
+        } catch (e) {
+          if (mounted) await showErrorDialog(context, e.toString());
+        }
+        break;
+      case 5:
+        // Balance - loaded on demand via accounts
+        if (_accounts.isEmpty) {
+          try {
+            final data = await api.getSiteAccounts(_site.id);
+            if (mounted) setState(() => _accounts = data);
+          } catch (_) {}
+        }
+        _loadBalances();
+        break;
     }
   }
 
@@ -108,6 +142,7 @@ class _SiteDetailPageState extends State<SiteDetailPage>
     setState(() => _syncing = true);
     try {
       final api = context.read<AppProvider>().api;
+      await api.syncSite(_site.id);
       final updated = await api.getSite(_site.id);
       if (mounted) {
         setState(() => _site = updated);
@@ -115,6 +150,10 @@ class _SiteDetailPageState extends State<SiteDetailPage>
         _accounts = [];
         _tokens = [];
         _models = [];
+        _checkInHistory = [];
+        _redemptionHistory = [];
+        _balances.clear();
+        _predictions.clear();
         _loadTabData(_tabController.index);
       }
     } catch (e) {
@@ -123,6 +162,162 @@ class _SiteDetailPageState extends State<SiteDetailPage>
       }
     } finally {
       if (mounted) setState(() => _syncing = false);
+    }
+  }
+
+  Future<void> _loadBalances() async {
+    if (_accounts.isEmpty) return;
+    final api = context.read<AppProvider>().api;
+    for (final account in _accounts) {
+      try {
+        final balance = await api.getBalance(_site.id, account.id);
+        if (mounted) {
+          setState(() => _balances[account.id] = balance);
+        }
+      } catch (_) {}
+      try {
+        final prediction =
+            await api.getBalancePrediction(_site.id, account.id);
+        if (mounted) {
+          setState(() => _predictions[account.id] = prediction);
+        }
+      } catch (_) {}
+    }
+  }
+
+  Future<void> _checkInAccount(SiteAccount account, AppLocalizations loc) async {
+    if (_checkingIn) return;
+    setState(() => _checkingIn = true);
+    try {
+      final api = context.read<AppProvider>().api;
+      final record = await api.checkInSite(_site.id, account.id);
+      if (mounted) {
+        if (record.status == 'already_checked') {
+          _showMessage(loc.t('site_already_checked'));
+        } else {
+          final rewardText = record.reward != null
+              ? ' +${record.reward!.toStringAsFixed(2)} ${record.rewardType ?? ''}'
+              : '';
+          _showMessage('${loc.t('site_checkin_success')}$rewardText');
+        }
+        // Refresh check-in history
+        _checkInHistory = [];
+        _loadTabData(4);
+      }
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _checkingIn = false);
+    }
+  }
+
+  void _showMessage(String message) {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        content: Text(message),
+        actions: [
+          CupertinoDialogAction(
+            child: Text(context.read<AppProvider>().loc.t('ok')),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showRedeemDialog(AppLocalizations loc) async {
+    final codeCtl = TextEditingController();
+    int? selectedAccountId;
+    if (_accounts.isNotEmpty) {
+      selectedAccountId = _accounts.first.id;
+    }
+
+    final result = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => CupertinoAlertDialog(
+          title: Text(loc.t('site_redeem')),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              CupertinoTextField(
+                controller: codeCtl,
+                placeholder: loc.t('site_redeem_code_hint'),
+                autocorrect: false,
+              ),
+              if (_accounts.length > 1) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  decoration: BoxDecoration(
+                    color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: selectedAccountId,
+                      isExpanded: true,
+                      items: _accounts
+                          .map((a) => DropdownMenuItem(
+                                value: a.id,
+                                child: Text(a.name, style: const TextStyle(fontSize: 14)),
+                              ))
+                          .toList(),
+                      onChanged: (v) =>
+                          setDialogState(() => selectedAccountId = v),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              child: Text(loc.t('cancel')),
+              onPressed: () => Navigator.pop(ctx, false),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              child: Text(loc.t('site_redeem')),
+              onPressed: () => Navigator.pop(ctx, true),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result != true || !mounted) return;
+    final code = codeCtl.text.trim();
+    if (code.isEmpty || selectedAccountId == null) return;
+
+    try {
+      final api = context.read<AppProvider>().api;
+      final record = await api.redeemCode(_site.id, selectedAccountId!, code);
+      if (mounted) {
+        String msg;
+        switch (record.status) {
+          case 'success':
+            msg = '${loc.t('site_redeem_success')}${record.value != null ? ' +${record.value}' : ''}';
+            break;
+          case 'expired':
+            msg = loc.t('site_redeem_expired');
+            break;
+          default:
+            msg = loc.t('site_redeem_failed');
+        }
+        _showMessage(msg);
+        _redemptionHistory = [];
+        _loadTabData(4);
+      }
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
     }
   }
 
@@ -259,6 +454,8 @@ class _SiteDetailPageState extends State<SiteDetailPage>
                   Tab(text: loc.t('site_accounts')),
                   Tab(text: loc.t('site_tokens')),
                   Tab(text: loc.t('site_models')),
+                  Tab(text: loc.t('site_checkin_history')),
+                  Tab(text: loc.t('site_balance')),
                 ],
               ),
             ),
@@ -271,6 +468,8 @@ class _SiteDetailPageState extends State<SiteDetailPage>
                   _buildAccountsTab(loc, colorScheme),
                   _buildTokensTab(loc, colorScheme),
                   _buildModelsTab(loc, colorScheme),
+                  _buildHistoryTab(loc, colorScheme),
+                  _buildBalanceTab(loc, colorScheme),
                 ],
               ),
             ),
@@ -406,12 +605,35 @@ class _SiteDetailPageState extends State<SiteDetailPage>
                         ? AppTheme.colorGreen
                         : AppTheme.colorGray,
                   ),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  CupertinoButton(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                    color: colorScheme.primary,
+                    onPressed: _checkingIn
+                        ? null
+                        : () => _checkInAccount(account, loc),
+                    child: _checkingIn
+                        ? const CupertinoActivityIndicator(
+                            radius: 8, color: Colors.white)
+                        : Text(
+                            loc.t('site_checkin'),
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.white,
+                            ),
+                          ),
+                  ),
                 ],
               ),
               const SizedBox(height: AppTheme.spacingSm),
               _InfoRow(label: loc.t('username'), value: account.email),
               if (account.plan != null)
-                _InfoRow(label: loc.t('site_account_plan'), value: account.plan!),
+                _InfoRow(
+                    label: loc.t('site_account_plan'), value: account.plan!),
               _InfoRow(
                 label: loc.t('site_account_balance'),
                 value: account.balance.toStringAsFixed(2),
@@ -424,6 +646,27 @@ class _SiteDetailPageState extends State<SiteDetailPage>
                 label: loc.t('site_account_requests_used'),
                 value: '${account.requestsUsed} / ${account.requestLimit}',
               ),
+              if (_predictions.containsKey(account.id)) ...[
+                const Divider(height: 16),
+                _InfoRow(
+                  label: loc.t('site_daily_average'),
+                  value: _predictions[account.id]!.dailyAverage.toStringAsFixed(4),
+                ),
+                _InfoRow(
+                  label: loc.t('site_days_remaining'),
+                  value: '${_predictions[account.id]!.estimatedDaysRemaining}',
+                  valueColor: _predictions[account.id]!.estimatedDaysRemaining < 7
+                      ? AppTheme.colorRed
+                      : _predictions[account.id]!.estimatedDaysRemaining < 30
+                          ? AppTheme.colorOrange
+                          : null,
+                ),
+                if (_predictions[account.id]!.recommendation != null)
+                  _InfoRow(
+                    label: loc.t('site_recommendation'),
+                    value: _predictions[account.id]!.recommendation!,
+                  ),
+              ],
             ],
           ),
         );
@@ -550,6 +793,333 @@ class _SiteDetailPageState extends State<SiteDetailPage>
       },
     );
   }
+
+  Widget _buildHistoryTab(AppLocalizations loc, ColorScheme colorScheme) {
+    if (_checkInHistory.isEmpty && _redemptionHistory.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(AppTheme.spacingLg),
+        children: [
+          // Redeem button at top
+          AppCard(
+            margin: const EdgeInsets.only(bottom: AppTheme.spacingMd),
+            padding: const EdgeInsets.all(AppTheme.spacingLg),
+            child: CupertinoButton(
+              padding: EdgeInsets.zero,
+              onPressed: () => _showRedeemDialog(loc),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(CupertinoIcons.gift, color: colorScheme.primary),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Text(
+                    loc.t('site_redeem'),
+                    style: TextStyle(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          AppEmptyState(
+            icon: CupertinoIcons.clock,
+            title: loc.t('no_data'),
+            subtitle: '${loc.t('site_checkin_history')} / ${loc.t('site_redemption_history')}',
+          ),
+        ],
+      );
+    }
+    return ListView(
+      padding: const EdgeInsets.all(AppTheme.spacingLg),
+      children: [
+        // Redeem button
+        AppCard(
+          margin: const EdgeInsets.only(bottom: AppTheme.spacingMd),
+          padding: const EdgeInsets.all(AppTheme.spacingLg),
+          child: CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: () => _showRedeemDialog(loc),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.gift, color: colorScheme.primary),
+                const SizedBox(width: AppTheme.spacingSm),
+                Text(
+                  loc.t('site_redeem'),
+                  style: TextStyle(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Check-in history
+        if (_checkInHistory.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+            child: Text(
+              loc.t('site_checkin_history'),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+          ...(_checkInHistory.map(
+            (record) => AppCard(
+              margin: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+              padding: const EdgeInsets.all(AppTheme.spacingMd),
+              child: Row(
+                children: [
+                  Icon(
+                    record.status == 'success'
+                        ? CupertinoIcons.checkmark_circle_fill
+                        : record.status == 'already_checked'
+                            ? CupertinoIcons.clock_fill
+                            : CupertinoIcons.xmark_circle_fill,
+                    size: 20,
+                    color: record.status == 'success'
+                        ? AppTheme.colorGreen
+                        : record.status == 'already_checked'
+                            ? AppTheme.colorOrange
+                            : AppTheme.colorRed,
+                  ),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          record.status == 'success'
+                              ? loc.t('site_checkin_success')
+                              : record.status == 'already_checked'
+                                  ? loc.t('site_already_checked')
+                                  : loc.t('site_checkin_failed'),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        if (record.reward != null)
+                          Text(
+                            '${loc.t('site_checkin_reward')}: +${record.reward!.toStringAsFixed(2)} ${record.rewardType ?? ''}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.colorGreen,
+                            ),
+                          ),
+                        if (record.message != null)
+                          Text(
+                            record.message!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    record.checkedAt,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+          const SizedBox(height: AppTheme.spacingLg),
+        ],
+        // Redemption history
+        if (_redemptionHistory.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+            child: Text(
+              loc.t('site_redemption_history'),
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+            ),
+          ),
+          ...(_redemptionHistory.map(
+            (record) => AppCard(
+              margin: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+              padding: const EdgeInsets.all(AppTheme.spacingMd),
+              child: Row(
+                children: [
+                  Icon(
+                    record.status == 'success'
+                        ? CupertinoIcons.checkmark_circle_fill
+                        : record.status == 'expired'
+                            ? CupertinoIcons.clock_fill
+                            : CupertinoIcons.xmark_circle_fill,
+                    size: 20,
+                    color: record.status == 'success'
+                        ? AppTheme.colorGreen
+                        : record.status == 'expired'
+                            ? AppTheme.colorOrange
+                            : AppTheme.colorRed,
+                  ),
+                  const SizedBox(width: AppTheme.spacingSm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          record.code,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        if (record.value != null)
+                          Text(
+                            '${loc.t('site_redeem_value')}: ${record.value}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.colorGreen,
+                            ),
+                          ),
+                        if (record.description != null)
+                          Text(
+                            record.description!,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    record.redeemedAt,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildBalanceTab(AppLocalizations loc, ColorScheme colorScheme) {
+    if (_accounts.isEmpty) {
+      return AppEmptyState(
+        icon: CupertinoIcons.money_dollar,
+        title: loc.t('no_data'),
+        subtitle: loc.t('site_balance'),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.all(AppTheme.spacingLg),
+      itemCount: _accounts.length,
+      itemBuilder: (context, index) {
+        final account = _accounts[index];
+        final balance = _balances[account.id];
+        final prediction = _predictions[account.id];
+        return AppCard(
+          margin: const EdgeInsets.only(bottom: AppTheme.spacingMd),
+          padding: const EdgeInsets.all(AppTheme.spacingLg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      account.name,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  if (prediction != null)
+                    AppTypeChip(
+                      label:
+                          '${prediction.estimatedDaysRemaining} ${loc.t('site_days_remaining')}',
+                      color: prediction.estimatedDaysRemaining < 7
+                          ? AppTheme.colorRed
+                          : prediction.estimatedDaysRemaining < 30
+                              ? AppTheme.colorOrange
+                              : AppTheme.colorGreen,
+                    ),
+                ],
+              ),
+              const SizedBox(height: AppTheme.spacingMd),
+              _InfoRow(
+                label: loc.t('site_balance'),
+                value: (balance?.balance ?? account.balance).toStringAsFixed(2),
+              ),
+              if (balance?.dailyUsage != null)
+                _InfoRow(
+                  label: loc.t('site_daily_average'),
+                  value: balance!.dailyUsage!.toStringAsFixed(4),
+                ),
+              if (balance?.weeklyUsage != null)
+                _InfoRow(
+                  label: loc.t('site_weekly_average'),
+                  value: balance!.weeklyUsage!.toStringAsFixed(4),
+                ),
+              if (prediction != null) ...[
+                const Divider(height: 16),
+                Text(
+                  loc.t('site_balance_prediction'),
+                  style: Theme.of(context).textTheme.footnote?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.spacingSm),
+                _InfoRow(
+                  label: loc.t('site_daily_average'),
+                  value: prediction.dailyAverage.toStringAsFixed(4),
+                ),
+                _InfoRow(
+                  label: loc.t('site_weekly_average'),
+                  value: prediction.weeklyAverage.toStringAsFixed(4),
+                ),
+                _InfoRow(
+                  label: loc.t('site_days_remaining'),
+                  value: '${prediction.estimatedDaysRemaining}',
+                  valueColor: prediction.estimatedDaysRemaining < 7
+                      ? AppTheme.colorRed
+                      : prediction.estimatedDaysRemaining < 30
+                          ? AppTheme.colorOrange
+                          : null,
+                ),
+                if (prediction.recommendation != null)
+                  _InfoRow(
+                    label: loc.t('site_recommendation'),
+                    value: prediction.recommendation!,
+                  ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _InfoCard extends StatelessWidget {
@@ -586,8 +1156,9 @@ class _InfoCard extends StatelessWidget {
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
+  final Color? valueColor;
 
-  const _InfoRow({required this.label, required this.value});
+  const _InfoRow({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -613,7 +1184,7 @@ class _InfoRow extends StatelessWidget {
               value,
               style: TextStyle(
                 fontSize: 14,
-                color: colorScheme.onSurface,
+                color: valueColor ?? colorScheme.onSurface,
               ),
             ),
           ),

@@ -13,6 +13,9 @@ import 'package:octopusmanage/models/llm.dart';
 import 'package:octopusmanage/models/ops.dart';
 import 'package:octopusmanage/models/relay_log.dart';
 import 'package:octopusmanage/models/setting.dart';
+import 'package:octopusmanage/models/api_credential.dart';
+import 'package:octopusmanage/models/model_mapping.dart';
+import 'package:octopusmanage/models/proxy.dart';
 import 'package:octopusmanage/models/site.dart';
 import 'package:octopusmanage/models/stats.dart';
 import 'package:octopusmanage/models/user.dart';
@@ -664,6 +667,246 @@ class OctopusApi {
       query: {'site_id': '$siteId'},
     );
     return parseJsonMapList(res['data']).map(SiteModel.fromJson).toList();
+  }
+
+  // ====== Site Sync ======
+  Future<void> syncSite(int siteId) async {
+    await _api.post('/api/v1/site/sync', body: {'id': siteId});
+  }
+
+  Future<void> syncAllSites() async {
+    await _api.post('/api/v1/site/sync-all');
+  }
+
+  // ====== Site Check-in ======
+  Future<CheckInRecord> checkInSite(int siteId, int accountId) async {
+    final res = await _api.post(
+      '/api/v1/site/checkin',
+      body: {'site_id': siteId, 'account_id': accountId},
+    );
+    return CheckInRecord.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<List<CheckInRecord>> checkInAllSites() async {
+    final res = await _api.post('/api/v1/site/checkin-all');
+    return parseJsonMapList(res['data']).map(CheckInRecord.fromJson).toList();
+  }
+
+  Future<List<CheckInRecord>> getCheckInHistory(
+    int siteId, {
+    int limit = 30,
+  }) async {
+    final res = await _api.get(
+      '/api/v1/site/checkin/history',
+      query: {'site_id': '$siteId', 'limit': '$limit'},
+    );
+    return parseJsonMapList(res['data']).map(CheckInRecord.fromJson).toList();
+  }
+
+  // ====== Site Redemption ======
+  Future<RedemptionRecord> redeemCode(
+    int siteId,
+    int accountId,
+    String code,
+  ) async {
+    final res = await _api.post(
+      '/api/v1/site/redeem',
+      body: {
+        'site_id': siteId,
+        'account_id': accountId,
+        'code': code,
+      },
+    );
+    return RedemptionRecord.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<List<RedemptionRecord>> batchRedeem(
+    List<int> siteIds,
+    String code,
+  ) async {
+    final res = await _api.post(
+      '/api/v1/site/redeem-batch',
+      body: {'site_ids': siteIds, 'code': code},
+    );
+    return parseJsonMapList(res['data'])
+        .map(RedemptionRecord.fromJson)
+        .toList();
+  }
+
+  Future<List<RedemptionRecord>> getRedemptionHistory(
+    int siteId, {
+    int limit = 30,
+  }) async {
+    final res = await _api.get(
+      '/api/v1/site/redeem/history',
+      query: {'site_id': '$siteId', 'limit': '$limit'},
+    );
+    return parseJsonMapList(res['data'])
+        .map(RedemptionRecord.fromJson)
+        .toList();
+  }
+
+  // ====== Site Balance ======
+  Future<BalanceSnapshot> getBalance(int siteId, int accountId) async {
+    final res = await _api.get(
+      '/api/v1/site/balance',
+      query: {'site_id': '$siteId', 'account_id': '$accountId'},
+    );
+    return BalanceSnapshot.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<List<BalanceSnapshot>> getBalanceHistory(
+    int siteId,
+    int accountId, {
+    int days = 30,
+  }) async {
+    final res = await _api.get(
+      '/api/v1/site/balance/history',
+      query: {
+        'site_id': '$siteId',
+        'account_id': '$accountId',
+        'days': '$days',
+      },
+    );
+    return parseJsonMapList(res['data'])
+        .map(BalanceSnapshot.fromJson)
+        .toList();
+  }
+
+  Future<BalancePrediction> getBalancePrediction(
+    int siteId,
+    int accountId,
+  ) async {
+    final res = await _api.get(
+      '/api/v1/site/balance/prediction',
+      query: {'site_id': '$siteId', 'account_id': '$accountId'},
+    );
+    return BalancePrediction.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  // ====== Proxy Pool ======
+  Future<List<ProxyConfiguration>> getProxies() async {
+    final res = await _api.get('/api/v1/proxy/list');
+    return parseJsonMapList(res['data'])
+        .map(ProxyConfiguration.fromJson)
+        .toList();
+  }
+
+  Future<ProxyConfiguration> createProxy(ProxyConfiguration proxy) async {
+    final res = await _api.post(
+      '/api/v1/proxy/create',
+      body: proxy.toJson(),
+    );
+    return ProxyConfiguration.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<ProxyConfiguration> updateProxy(ProxyConfiguration proxy) async {
+    final res = await _api.put(
+      '/api/v1/proxy/${proxy.id}',
+      body: proxy.toJson(),
+    );
+    return ProxyConfiguration.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<void> deleteProxy(int id) async {
+    await _api.delete('/api/v1/proxy/$id');
+  }
+
+  Future<Map<String, dynamic>> testProxy(String url, String type,
+      {String? username, String? password}) async {
+    final body = <String, dynamic>{
+      'url': url,
+      'type': type,
+    };
+    if (username != null) body['username'] = username;
+    if (password != null) body['password'] = password;
+    final res = await _api.post('/api/v1/proxy/test', body: body);
+    return parseJsonMap(res['data']) ?? {};
+  }
+
+  // ====== Model Mapping ======
+  Future<List<ModelMapping>> getModelMappings() async {
+    final res = await _api.get('/api/v1/model-mapping/list');
+    return parseJsonMapList(res['data'])
+        .map(ModelMapping.fromJson)
+        .toList();
+  }
+
+  Future<ModelMapping> createModelMapping(ModelMapping mapping) async {
+    final res = await _api.post(
+      '/api/v1/model-mapping/create',
+      body: mapping.toJson(),
+    );
+    return ModelMapping.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<ModelMapping> updateModelMapping(ModelMapping mapping) async {
+    final res = await _api.put(
+      '/api/v1/model-mapping/${mapping.id}',
+      body: mapping.toJson(),
+    );
+    return ModelMapping.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<void> deleteModelMapping(int id) async {
+    await _api.delete('/api/v1/model-mapping/$id');
+  }
+
+  // ====== API Credential Profiles ======
+  Future<List<APICredentialProfile>> getCredentials() async {
+    final res = await _api.get('/api/v1/credential/list');
+    return parseJsonMapList(res['data'])
+        .map(APICredentialProfile.fromJson)
+        .toList();
+  }
+
+  Future<APICredentialProfile> createCredential(
+      APICredentialProfile credential) async {
+    final res = await _api.post(
+      '/api/v1/credential/create',
+      body: credential.toJson(),
+    );
+    return APICredentialProfile.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<APICredentialProfile> updateCredential(
+      APICredentialProfile credential) async {
+    final res = await _api.put(
+      '/api/v1/credential/${credential.id}',
+      body: credential.toJson(),
+    );
+    return APICredentialProfile.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<void> deleteCredential(int id) async {
+    await _api.delete('/api/v1/credential/$id');
+  }
+
+  Future<List<VerificationProbe>> getVerificationProbes() async {
+    final res = await _api.get('/api/v1/verification/probes');
+    return parseJsonMapList(res['data'])
+        .map(VerificationProbe.fromJson)
+        .toList();
+  }
+
+  Future<List<VerificationResult>> runVerification(
+      int credentialId, List<String> probes) async {
+    final res = await _api.post(
+      '/api/v1/verification/run-for/$credentialId',
+      body: {'probes': probes},
+    );
+    return parseJsonMapList(res['data'])
+        .map(VerificationResult.fromJson)
+        .toList();
+  }
+
+  Future<String> exportCliConfig(
+      int credentialId, String tool) async {
+    final res = await _api.get(
+      '/api/v1/credential/$credentialId/export',
+      query: {'tool': tool},
+    );
+    return res['data']?.toString() ?? '';
   }
 
   // ====== Update ======

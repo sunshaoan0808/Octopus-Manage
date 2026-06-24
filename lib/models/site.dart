@@ -276,3 +276,187 @@ class SiteModel {
     };
   }
 }
+
+class CheckInRecord {
+  final int id;
+  final int siteId;
+  final int accountId;
+  final String status;
+  final double? reward;
+  final String? rewardType;
+  final String checkedAt;
+  final String? message;
+
+  const CheckInRecord({
+    this.id = 0,
+    this.siteId = 0,
+    this.accountId = 0,
+    this.status = 'success',
+    this.reward,
+    this.rewardType,
+    this.checkedAt = '',
+    this.message,
+  });
+
+  factory CheckInRecord.fromJson(Map<String, dynamic> json) {
+    return CheckInRecord(
+      id: parseInt(json['id']),
+      siteId: parseInt(json['site_id']),
+      accountId: parseInt(json['account_id']),
+      status: parseString(json['status'], fallback: 'success'),
+      reward: json['reward'] == null ? null : parseDouble(json['reward']),
+      rewardType: json['reward_type'] == null
+          ? null
+          : parseString(json['reward_type']),
+      checkedAt: parseString(json['checked_at']),
+      message: json['message'] == null
+          ? null
+          : parseString(json['message']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id > 0) 'id': id,
+      'site_id': siteId,
+      'account_id': accountId,
+      'status': status,
+      if (reward != null) 'reward': reward,
+      if (rewardType != null) 'reward_type': rewardType,
+      'checked_at': checkedAt,
+      if (message != null) 'message': message,
+    };
+  }
+}
+
+class RedemptionRecord {
+  final int id;
+  final int siteId;
+  final int accountId;
+  final String code;
+  final String status;
+  final double? value;
+  final String? description;
+  final String redeemedAt;
+
+  const RedemptionRecord({
+    this.id = 0,
+    this.siteId = 0,
+    this.accountId = 0,
+    this.code = '',
+    this.status = 'success',
+    this.value,
+    this.description,
+    this.redeemedAt = '',
+  });
+
+  factory RedemptionRecord.fromJson(Map<String, dynamic> json) {
+    return RedemptionRecord(
+      id: parseInt(json['id']),
+      siteId: parseInt(json['site_id']),
+      accountId: parseInt(json['account_id']),
+      code: parseString(json['code']),
+      status: parseString(json['status'], fallback: 'success'),
+      value: json['value'] == null ? null : parseDouble(json['value']),
+      description: json['description'] == null
+          ? null
+          : parseString(json['description']),
+      redeemedAt: parseString(json['redeemed_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id > 0) 'id': id,
+      'site_id': siteId,
+      'account_id': accountId,
+      'code': code,
+      'status': status,
+      if (value != null) 'value': value,
+      if (description != null) 'description': description,
+      'redeemed_at': redeemedAt,
+    };
+  }
+}
+
+class BalanceSnapshot {
+  final int id;
+  final int siteId;
+  final int accountId;
+  final double balance;
+  final double? dailyUsage;
+  final double? weeklyUsage;
+  final double? monthlyUsage;
+  final int recordedAt;
+
+  const BalanceSnapshot({
+    this.id = 0,
+    this.siteId = 0,
+    this.accountId = 0,
+    this.balance = 0,
+    this.dailyUsage,
+    this.weeklyUsage,
+    this.monthlyUsage,
+    this.recordedAt = 0,
+  });
+
+  factory BalanceSnapshot.fromJson(Map<String, dynamic> json) {
+    return BalanceSnapshot(
+      id: parseInt(json['id']),
+      siteId: parseInt(json['site_id']),
+      accountId: parseInt(json['account_id']),
+      balance: parseDouble(json['balance']),
+      dailyUsage: json['daily_usage'] == null
+          ? null
+          : parseDouble(json['daily_usage']),
+      weeklyUsage: json['weekly_usage'] == null
+          ? null
+          : parseDouble(json['weekly_usage']),
+      monthlyUsage: json['monthly_usage'] == null
+          ? null
+          : parseDouble(json['monthly_usage']),
+      recordedAt: parseInt(json['recorded_at']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id > 0) 'id': id,
+      'site_id': siteId,
+      'account_id': accountId,
+      'balance': balance,
+      if (dailyUsage != null) 'daily_usage': dailyUsage,
+      if (weeklyUsage != null) 'weekly_usage': weeklyUsage,
+      if (monthlyUsage != null) 'monthly_usage': monthlyUsage,
+      'recorded_at': recordedAt,
+    };
+  }
+}
+
+class BalancePrediction {
+  final double currentBalance;
+  final double dailyAverage;
+  final double weeklyAverage;
+  final int estimatedDaysRemaining;
+  final String? recommendation;
+
+  const BalancePrediction({
+    this.currentBalance = 0,
+    this.dailyAverage = 0,
+    this.weeklyAverage = 0,
+    this.estimatedDaysRemaining = 0,
+    this.recommendation,
+  });
+
+  factory BalancePrediction.fromJson(Map<String, dynamic> json) {
+    return BalancePrediction(
+      currentBalance: parseDouble(json['current_balance']),
+      dailyAverage: parseDouble(json['daily_average']),
+      weeklyAverage: parseDouble(json['weekly_average']),
+      estimatedDaysRemaining: parseInt(json['estimated_days_remaining']),
+      recommendation: json['recommendation'] == null
+          ? null
+          : parseString(json['recommendation']),
+    );
+  }
+}

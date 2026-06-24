@@ -1091,6 +1091,51 @@ class AppLocalizations {
     'site_model_output_price': {AppLocale.en: 'Output Price', AppLocale.zh: '输出价格'},
     'site_model_context_window': {AppLocale.en: 'Context Window', AppLocale.zh: '上下文窗口'},
 
+    // Site Sync
+    'site_sync_all': {AppLocale.en: 'Sync All', AppLocale.zh: '同步全部'},
+    'site_sync_success': {AppLocale.en: 'Site synced successfully', AppLocale.zh: '站点同步成功'},
+    'site_sync_failed': {AppLocale.en: 'Sync failed', AppLocale.zh: '同步失败'},
+    'site_syncing': {AppLocale.en: 'Syncing...', AppLocale.zh: '同步中...'},
+
+    // Site Check-in
+    'site_checkin': {AppLocale.en: 'Check-in', AppLocale.zh: '签到'},
+    'site_checkin_all': {AppLocale.en: 'Check-in All', AppLocale.zh: '全部签到'},
+    'site_checkin_success': {AppLocale.en: 'Check-in successful', AppLocale.zh: '签到成功'},
+    'site_checkin_failed': {AppLocale.en: 'Check-in failed', AppLocale.zh: '签到失败'},
+    'site_already_checked': {AppLocale.en: 'Already checked in', AppLocale.zh: '已签到'},
+    'site_checkin_reward': {AppLocale.en: 'Reward', AppLocale.zh: '奖励'},
+    'site_checkin_history': {AppLocale.en: 'Check-in History', AppLocale.zh: '签到记录'},
+    'site_checkin_all_success': {
+      AppLocale.en: 'All sites checked in',
+      AppLocale.zh: '全部站点签到完成',
+    },
+    'site_checkin_all_failed': {
+      AppLocale.en: 'Check-in all failed',
+      AppLocale.zh: '批量签到失败',
+    },
+
+    // Site Redemption
+    'site_redeem': {AppLocale.en: 'Redeem', AppLocale.zh: '兑换'},
+    'site_redeem_code': {AppLocale.en: 'Redemption Code', AppLocale.zh: '兑换码'},
+    'site_redeem_code_hint': {AppLocale.en: 'Enter redemption code', AppLocale.zh: '输入兑换码'},
+    'site_redeem_success': {AppLocale.en: 'Redeemed successfully', AppLocale.zh: '兑换成功'},
+    'site_redeem_failed': {AppLocale.en: 'Redemption failed', AppLocale.zh: '兑换失败'},
+    'site_redeem_expired': {AppLocale.en: 'Code expired', AppLocale.zh: '兑换码已过期'},
+    'site_redeem_value': {AppLocale.en: 'Value', AppLocale.zh: '面值'},
+    'site_redemption_history': {
+      AppLocale.en: 'Redemption History',
+      AppLocale.zh: '兑换记录',
+    },
+
+    // Site Balance
+    'site_balance': {AppLocale.en: 'Balance', AppLocale.zh: '余额'},
+    'site_balance_history': {AppLocale.en: 'Balance History', AppLocale.zh: '余额历史'},
+    'site_balance_prediction': {AppLocale.en: 'Balance Prediction', AppLocale.zh: '余额预测'},
+    'site_days_remaining': {AppLocale.en: 'Days Remaining', AppLocale.zh: '剩余天数'},
+    'site_daily_average': {AppLocale.en: 'Daily Average', AppLocale.zh: '日均消耗'},
+    'site_weekly_average': {AppLocale.en: 'Weekly Average', AppLocale.zh: '周均消耗'},
+    'site_recommendation': {AppLocale.en: 'Recommendation', AppLocale.zh: '建议'},
+
     // Errors
     'error': {AppLocale.en: 'Error', AppLocale.zh: '错误'},
     'operation_failed': {
