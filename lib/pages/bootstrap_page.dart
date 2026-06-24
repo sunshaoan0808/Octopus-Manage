@@ -56,12 +56,12 @@ class _BootstrapPageState extends State<BootstrapPage> {
       if (success && mounted) {
         showCupertinoDialog(
           context: context,
-          builder: (_) => CupertinoAlertDialog(
+          builder: (dialogContext) => CupertinoAlertDialog(
             title: Text(loc.t('admin_created')),
             actions: [
               CupertinoDialogAction(
                 child: Text(loc.t('ok')),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
               ),
             ],
           ),
@@ -69,12 +69,12 @@ class _BootstrapPageState extends State<BootstrapPage> {
       } else if (!success && mounted) {
         showCupertinoDialog(
           context: context,
-          builder: (_) => CupertinoAlertDialog(
+          builder: (dialogContext) => CupertinoAlertDialog(
             title: Text(loc.t('bootstrap_failed')),
             actions: [
               CupertinoDialogAction(
                 child: Text(loc.t('ok')),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
               ),
             ],
           ),

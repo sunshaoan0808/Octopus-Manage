@@ -31,6 +31,7 @@ class _ModelPageState extends State<ModelPage> {
   }
 
   Future<void> _loadModels() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -55,6 +56,113 @@ class _ModelPageState extends State<ModelPage> {
         _error = e.toString();
       });
     }
+  }
+
+  Future<void> _showMarketSheet(AppLocalizations loc, ColorScheme cs) async {
+    try {
+      final api = context.read<AppProvider>().api;
+      final market = await api.getModelMarket();
+
+      if (!mounted) return;
+      showCupertinoModalPopup(
+        context: context,
+        builder: (ctx) => FractionallySizedBox(
+          heightFactor: 0.85,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppTheme.getSurfaceLowest(cs),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXLarge)),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(AppTheme.spacingLg),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(loc.t('model_market'), style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: cs.onSurface)),
+                          GestureDetector(
+                            onTap: () => Navigator.pop(ctx),
+                            child: Icon(CupertinoIcons.xmark_circle_fill, size: 24, color: cs.onSurfaceVariant),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Summary
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: AppTheme.spacingLg),
+                      child: Row(
+                        children: [
+                          _chip(loc.t('models'), '${market.summary.modelCount}'),
+                          const SizedBox(width: 8),
+                          _chip(loc.t('coverage'), '${market.summary.coverageCount}'),
+                          const SizedBox(width: 8),
+                          _chip(loc.t('latency'), '${market.summary.averageLatencyMS}ms'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: market.items.length,
+                        itemBuilder: (ctx, i) {
+                          final item = market.items[i];
+                          return Padding(
+                            padding: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+                            child: AppCard(
+                              padding: const EdgeInsets.all(AppTheme.spacingMd),
+                              borderRadius: AppTheme.radiusLarge,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(children: [
+                                    Expanded(child: Text(item.name, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface))),
+                                    Text('\$${item.input.toStringAsFixed(2)} / \$${item.output.toStringAsFixed(2)}',
+                                      style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                                  ]),
+                                  const SizedBox(height: 4),
+                                  Row(children: [
+                                    Text('${item.channelCount} ${loc.t('channels')}', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                                    const SizedBox(width: 12),
+                                    Text('${item.enabledKeyCount} ${loc.t('keys')}', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                                    const SizedBox(width: 12),
+                                    Text('${item.averageLatencyMS}ms', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                                    const SizedBox(width: 12),
+                                    Text('${item.successRate.toStringAsFixed(1)}%', style: TextStyle(fontSize: 12,
+                                      color: item.successRate >= 95 ? AppTheme.colorGreen : AppTheme.colorOrange)),
+                                  ]),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) showErrorDialog(context, e.toString());
+    }
+  }
+
+  Widget _chip(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text('$label: $value', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Theme.of(context).colorScheme.primary)),
+    );
   }
 
   Future<void> _syncModelPrice(AppLocalizations loc) async {
@@ -126,7 +234,7 @@ class _ModelPageState extends State<ModelPage> {
       text: existing != null ? existing.cacheWrite.toString() : '0',
     );
 
-    final result = await showDialog<bool>(
+    final result = await showCupertinoDialog<bool>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(isEdit ? loc.t('edit_model') : loc.t('create_model')),
@@ -268,15 +376,29 @@ class _ModelPageState extends State<ModelPage> {
                     colorScheme,
                   ).withValues(alpha: 0.85),
                   border: null,
-                  trailing: GestureDetector(
-                    onTap: _syncingPrice ? null : () => _syncModelPrice(loc),
-                    child: _syncingPrice
-                        ? const CupertinoActivityIndicator(radius: 10)
-                        : Icon(
-                            CupertinoIcons.refresh,
-                            size: 22,
-                            color: colorScheme.primary,
-                          ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      GestureDetector(
+                        onTap: () => _showMarketSheet(loc, colorScheme),
+                        child: Icon(
+                          CupertinoIcons.chart_bar_alt_fill,
+                          size: 22,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: AppTheme.spacingMd),
+                      GestureDetector(
+                        onTap: _syncingPrice ? null : () => _syncModelPrice(loc),
+                        child: _syncingPrice
+                            ? const CupertinoActivityIndicator(radius: 10)
+                            : Icon(
+                                CupertinoIcons.refresh,
+                                size: 22,
+                                color: colorScheme.primary,
+                              ),
+                      ),
+                    ],
                   ),
                 ),
                 CupertinoSliverRefreshControl(onRefresh: _loadModels),

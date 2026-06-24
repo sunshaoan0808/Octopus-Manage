@@ -24,6 +24,7 @@ class _LogPageState extends State<LogPage> {
   String? _errorMessage;
   int _page = 1;
   bool _hasMore = true;
+  int _requestId = 0;
 
   @override
   void initState() {
@@ -32,11 +33,15 @@ class _LogPageState extends State<LogPage> {
   }
 
   Future<void> _loadLogs({bool refresh = false}) async {
+    if (_loading && !refresh) return;
+
     if (refresh) {
       // 先重置状态，再 setState，避免快速双击时状态不一致
       _page = 1;
       _hasMore = true;
     }
+
+    final requestId = ++_requestId;
     if (!mounted) return;
     setState(() {
       _loading = true;
@@ -47,10 +52,8 @@ class _LogPageState extends State<LogPage> {
       final api = context.read<AppProvider>().api;
       final currentPage = _page; // 记录当前请求的页码
       final logs = await api.getLogs(page: currentPage, pageSize: 20);
-      if (mounted) {
+      if (mounted && requestId == _requestId) {
         setState(() {
-          // 如果期间已被另一次刷新重置，则丢弃过期结果
-          if (!refresh && _page != currentPage) return;
           _logs.addAll(logs);
           _hasMore = logs.length >= 20;
           _page = currentPage + 1;
@@ -58,7 +61,7 @@ class _LogPageState extends State<LogPage> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && requestId == _requestId) {
         setState(() {
           _loading = false;
           _errorMessage = e.toString();
@@ -87,6 +90,64 @@ class _LogPageState extends State<LogPage> {
         showErrorDialog(context, e.toString());
       }
     }
+  }
+
+  void _showLogDetail(RelayLog log, AppLocalizations loc) {
+    final theme = Theme.of(context);
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(log.requestModelName, style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: theme.colorScheme.onSurface)),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _detailRow(loc.t('channels'), log.channelName),
+                _detailRow(loc.t('model'), log.actualModelName.isNotEmpty ? log.actualModelName : log.requestModelName),
+                _detailRow(loc.t('api_key'), log.requestApiKeyName),
+                _detailRow('Input Tokens', '${log.inputTokens}'),
+                _detailRow('Output Tokens', '${log.outputTokens}'),
+                _detailRow(loc.t('avg_wait'), '${log.useTime}ms'),
+                _detailRow(loc.t('cost'), '\$${log.cost.toStringAsFixed(4)}'),
+                _detailRow(loc.t('expire_at'), _formatTime(log.time)),
+                if (log.hasError)
+                  _detailRow(loc.t('error'), log.error, isError: true),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(loc.t('ok')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value, {bool isError = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(label, style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ),
+          Expanded(
+            child: Text(value, maxLines: 3, overflow: TextOverflow.ellipsis,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+              color: isError ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurface)),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatTime(int timestamp) {
@@ -155,7 +216,9 @@ class _LogPageState extends State<LogPage> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate((context, index) {
                     final log = _logs[index];
-                    return AppCard(
+                    return GestureDetector(
+                      onTap: () => _showLogDetail(log, loc),
+                      child: AppCard(
                       margin: const EdgeInsets.only(bottom: AppTheme.spacingSm),
                       padding: const EdgeInsets.all(AppTheme.spacingMd),
                       borderRadius: AppTheme.radiusLarge,
@@ -204,6 +267,8 @@ class _LogPageState extends State<LogPage> {
                                     ),
                                     Text(
                                       log.channelName,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 13,
                                         color: colorScheme.onSurfaceVariant,
@@ -260,6 +325,7 @@ class _LogPageState extends State<LogPage> {
                             ],
                           ),
                         ],
+                      ),
                       ),
                     );
                   }, childCount: _logs.length),

@@ -31,6 +31,7 @@ class _ChannelPageState extends State<ChannelPage> {
   }
 
   Future<void> _loadChannels() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final api = context.read<AppProvider>().api;
@@ -146,9 +147,9 @@ class _ChannelPageState extends State<ChannelPage> {
       case 5:
         return loc.t('type_openai_embedding');
       case 6:
-        return 'Type 6';
+        return loc.t('type_mimo');
       default:
-        return 'Type $type';
+        return loc.t('type_unknown', {'type': '$type'});
     }
   }
 
@@ -280,6 +281,8 @@ class _ChannelPageState extends State<ChannelPage> {
                                             Expanded(
                                               child: Text(
                                                 channel.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
                                                 style: TextStyle(
                                                   fontSize: 17,
                                                   fontWeight: FontWeight.w600,
@@ -398,7 +401,7 @@ class _ChannelPageState extends State<ChannelPage> {
                   ),
               ],
             ),
-            if (!_loading && _channels.isNotEmpty)
+            if (!_loading)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,

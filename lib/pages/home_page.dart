@@ -7,6 +7,7 @@ import 'package:octopusmanage/pages/model_page.dart';
 import 'package:octopusmanage/pages/api_key_page.dart';
 import 'package:octopusmanage/pages/log_page.dart';
 import 'package:octopusmanage/pages/setting_page.dart';
+import 'package:octopusmanage/pages/user_page.dart';
 import 'package:octopusmanage/theme/app_theme.dart';
 import 'package:octopusmanage/providers/app_provider.dart';
 import 'package:provider/provider.dart';
@@ -26,6 +27,7 @@ class _HomePageState extends State<HomePage> {
     ModelPage(),
     ApiKeyPage(),
     LogPage(),
+    UserPage(),
     SettingPage(),
   ];
 
@@ -69,6 +71,10 @@ class _HomePageState extends State<HomePage> {
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.doc_text),
             label: loc.t('logs'),
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(CupertinoIcons.person_2),
+            label: loc.t('users'),
           ),
           BottomNavigationBarItem(
             icon: Icon(CupertinoIcons.settings),

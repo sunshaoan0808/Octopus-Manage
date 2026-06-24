@@ -122,7 +122,9 @@ class _DashboardPageState extends State<DashboardPage> {
           _apiKeysMap = apiKeysMap;
           _loading = false;
           _error = null;
-          _expandedRankings.clear();
+          if (!silent) {
+            _expandedRankings.clear();
+          }
         });
       }
     } catch (e) {
@@ -139,12 +141,12 @@ class _DashboardPageState extends State<DashboardPage> {
     }
   }
 
-  String _getApiKeyDisplayName(int id) {
+  String _getApiKeyDisplayName(int id, AppLocalizations loc) {
     final key = _apiKeysMap[id];
     if (key != null && key.name.isNotEmpty) {
       return key.name;
     }
-    return 'Key #$id';
+    return loc.t('api_key_fallback_name', {'id': '$id'});
   }
 
   String _formatNum(int num) {
@@ -311,7 +313,7 @@ class _DashboardPageState extends State<DashboardPage> {
               padding: EdgeInsets.zero,
               mainAxisSpacing: spacing,
               crossAxisSpacing: spacing,
-              childAspectRatio: itemWidth / targetHeight,
+              childAspectRatio: itemWidth.floorToDouble() / targetHeight,
               children: [
                 _buildStatItem(
                   loc.t('requests'),
@@ -1186,7 +1188,7 @@ class _DashboardPageState extends State<DashboardPage> {
     AppLocalizations loc,
     int rank,
   ) {
-    final displayName = _getApiKeyDisplayName(entry.apiKeyId);
+    final displayName = _getApiKeyDisplayName(entry.apiKeyId, loc);
     final metrics = entry.metrics;
     final totalRequests = metrics.requestSuccess + metrics.requestFailed;
 

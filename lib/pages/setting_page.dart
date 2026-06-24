@@ -5,6 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:octopusmanage/l10n/app_localizations.dart';
 import 'package:octopusmanage/models/group.dart';
 import 'package:octopusmanage/models/setting.dart';
+import 'package:octopusmanage/pages/alert_page.dart';
+import 'package:octopusmanage/pages/analytics_page.dart';
+import 'package:octopusmanage/pages/audit_log_page.dart';
+import 'package:octopusmanage/pages/ops_page.dart';
 import 'package:octopusmanage/providers/app_provider.dart';
 import 'package:octopusmanage/theme/app_theme.dart';
 import 'package:octopusmanage/widgets/app_card.dart';
@@ -88,6 +92,7 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _loadSettings() async {
+    if (!mounted) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -146,7 +151,8 @@ class _SettingPageState extends State<SettingPage> {
     }
   }
 
-  bool _isBooleanSetting(String key) => key == 'relay_log_keep_enabled';
+  bool _isBooleanSetting(String key) =>
+      key == 'relay_log_keep_enabled' || key == 'semantic_cache_enabled';
 
   Future<void> _toggleBoolSetting(Setting setting) async {
     final newValue = setting.value == 'true' ? 'false' : 'true';
@@ -163,7 +169,7 @@ class _SettingPageState extends State<SettingPage> {
 
   Future<void> _editSetting(Setting setting, AppLocalizations loc) async {
     final controller = TextEditingController(text: setting.value);
-    final result = await showDialog<String>(
+    final result = await showCupertinoDialog<String>(
       context: context,
       builder: (ctx) => CupertinoAlertDialog(
         title: Text(_settingLabel(setting.key, loc)),
@@ -244,7 +250,7 @@ class _SettingPageState extends State<SettingPage> {
   }
 
   Future<void> _changePassword(AppLocalizations loc) async {
-    final payload = await showDialog<_PasswordChangeValue>(
+    final payload = await showCupertinoDialog<_PasswordChangeValue>(
       context: context,
       builder: (_) => _PasswordChangeDialog(loc: loc),
     );
@@ -658,6 +664,24 @@ class _SettingPageState extends State<SettingPage> {
       'ai_route_timeout_seconds': 'setting_ai_route_timeout_seconds',
       'ai_route_parallelism': 'setting_ai_route_parallelism',
       'ai_route_services': 'setting_ai_route_services',
+      'auto_strategy_latency_weight':
+          'setting_auto_strategy_latency_weight',
+      'alert_notify_language': 'setting_alert_notify_language',
+      'semantic_cache_enabled': 'setting_semantic_cache_enabled',
+      'semantic_cache_embedding_base_url':
+          'setting_semantic_cache_embedding_base_url',
+      'semantic_cache_embedding_model':
+          'setting_semantic_cache_embedding_model',
+      'semantic_cache_embedding_api_key':
+          'setting_semantic_cache_embedding_api_key',
+      'semantic_cache_similarity_threshold':
+          'setting_semantic_cache_similarity_threshold',
+      'semantic_cache_ttl_seconds':
+          'setting_semantic_cache_ttl_seconds',
+      'semantic_cache_max_entries':
+          'setting_semantic_cache_max_entries',
+      'semantic_cache_embedding_dimensions':
+          'setting_semantic_cache_embedding_dimensions',
     };
     return loc.t(keyMap[key] ?? key);
   }
@@ -730,6 +754,55 @@ class _SettingPageState extends State<SettingPage> {
                       buttonLabel: loc.t('change_action'),
                       busy: _changingPassword,
                       onTap: () => _changePassword(loc),
+                    ),
+                  ],
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _SettingsActionCard(
+                  icon: CupertinoIcons.rectangle_stack,
+                  title: loc.t('ops'),
+                  margin: const EdgeInsets.fromLTRB(
+                    AppTheme.spacingLg,
+                    AppTheme.spacingLg,
+                    AppTheme.spacingLg,
+                    0,
+                  ),
+                  children: [
+                    _ActionRow(
+                      title: loc.t('ops'),
+                      icon: CupertinoIcons.chevron_right,
+                      busy: false,
+                      onTap: () => Navigator.of(context).push(
+                        CupertinoPageRoute(builder: (_) => const OpsPage()),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingSm),
+                    _ActionRow(
+                      title: loc.t('alerts'),
+                      icon: CupertinoIcons.chevron_right,
+                      busy: false,
+                      onTap: () => Navigator.of(context).push(
+                        CupertinoPageRoute(builder: (_) => const AlertPage()),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingSm),
+                    _ActionRow(
+                      title: loc.t('analytics'),
+                      icon: CupertinoIcons.chevron_right,
+                      busy: false,
+                      onTap: () => Navigator.of(context).push(
+                        CupertinoPageRoute(builder: (_) => const AnalyticsPage()),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingSm),
+                    _ActionRow(
+                      title: loc.t('audit_logs'),
+                      icon: CupertinoIcons.chevron_right,
+                      busy: false,
+                      onTap: () => Navigator.of(context).push(
+                        CupertinoPageRoute(builder: (_) => const AuditLogPage()),
+                      ),
                     ),
                   ],
                 ),
@@ -970,7 +1043,7 @@ class _SettingPageState extends State<SettingPage> {
                   children: [
                     _ValueActionRow(
                       title: loc.t('setting_sync_llm_interval'),
-                      value: '${_settingValue('sync_llm_interval', '24')} h',
+                      value: '${_settingValue('sync_llm_interval', '24')} ${loc.t('hour_unit')}',
                       onTap: () => _editSettingValue(
                         key: 'sync_llm_interval',
                         title: loc.t('setting_sync_llm_interval'),
@@ -1004,7 +1077,7 @@ class _SettingPageState extends State<SettingPage> {
                     _ValueActionRow(
                       title: loc.t('setting_model_info_update_interval'),
                       value:
-                          '${_settingValue('model_info_update_interval', '24')} h',
+                          '${_settingValue('model_info_update_interval', '24')} ${loc.t('hour_unit')}',
                       onTap: () => _editSettingValue(
                         key: 'model_info_update_interval',
                         title: loc.t('setting_model_info_update_interval'),
@@ -1194,7 +1267,9 @@ class _SettingPageState extends State<SettingPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          provider.locale == AppLocale.en ? 'English' : '中文',
+                          provider.locale == AppLocale.en
+                              ? loc.t('language_english')
+                              : loc.t('language_chinese'),
                           style: TextStyle(color: colorScheme.onSurfaceVariant),
                         ),
                         Icon(
@@ -1530,6 +1605,7 @@ class _ActionRow extends StatelessWidget {
   final String title;
   final String? subtitle;
   final String buttonLabel;
+  final IconData? icon;
   final bool busy;
   final VoidCallback onTap;
   final bool isDanger;
@@ -1537,7 +1613,8 @@ class _ActionRow extends StatelessWidget {
   const _ActionRow({
     required this.title,
     this.subtitle,
-    required this.buttonLabel,
+    this.buttonLabel = '',
+    this.icon,
     required this.busy,
     required this.onTap,
     this.isDanger = false,
@@ -1568,21 +1645,30 @@ class _ActionRow extends StatelessWidget {
             ],
           ),
         ),
-        CupertinoButton(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          color: isDanger ? colorScheme.error : colorScheme.secondaryContainer,
-          onPressed: busy ? null : onTap,
-          child: busy
-              ? const CupertinoActivityIndicator()
-              : Text(
-                  buttonLabel,
-                  style: TextStyle(
-                    color: isDanger
-                        ? Colors.white
-                        : colorScheme.onSecondaryContainer,
+        if (icon != null)
+          GestureDetector(
+            onTap: busy ? null : onTap,
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Icon(icon, size: 18, color: colorScheme.onSurfaceVariant),
+            ),
+          )
+        else
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            color: isDanger ? colorScheme.error : colorScheme.secondaryContainer,
+            onPressed: busy ? null : onTap,
+            child: busy
+                ? const CupertinoActivityIndicator()
+                : Text(
+                    buttonLabel,
+                    style: TextStyle(
+                      color: isDanger
+                          ? Colors.white
+                          : colorScheme.onSecondaryContainer,
+                    ),
                   ),
-                ),
-        ),
+          ),
       ],
     );
   }

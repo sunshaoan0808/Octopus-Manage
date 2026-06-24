@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:octopusmanage/providers/app_provider.dart';
+import 'package:octopusmanage/services/api_service.dart';
 import 'package:octopusmanage/theme/app_theme.dart';
 import 'package:octopusmanage/widgets/app_card.dart';
 import 'package:octopusmanage/widgets/app_error_dialog.dart';
@@ -26,6 +27,7 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       final provider = context.read<AppProvider>();
       _urlController.text = provider.baseUrl;
     });
@@ -40,14 +42,20 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _submit() async {
-    final url = _urlController.text.trim();
+    final loc = context.read<AppProvider>().loc;
+    final url = ApiService.normalizeBaseUrl(_urlController.text);
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
     if (url.isEmpty || username.isEmpty || password.isEmpty) {
-      final loc = context.read<AppProvider>().loc;
       showErrorDialog(context, loc.t('required'));
       return;
     }
+    if (!ApiService.isValidBaseUrl(url)) {
+      showErrorDialog(context, loc.t('invalid_server_url'));
+      return;
+    }
+
+    _urlController.text = url;
 
     setState(() => _loading = true);
     try {
@@ -64,12 +72,12 @@ class _LoginPageState extends State<LoginPage> {
           final loc = provider.loc;
           showCupertinoDialog(
             context: context,
-            builder: (_) => CupertinoAlertDialog(
+            builder: (dialogContext) => CupertinoAlertDialog(
               title: Text(loc.t('login_failed')),
               actions: [
                 CupertinoDialogAction(
                   child: Text(loc.t('ok')),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () => Navigator.pop(dialogContext),
                 ),
               ],
             ),

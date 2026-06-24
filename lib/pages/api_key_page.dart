@@ -30,6 +30,7 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
   }
 
   Future<void> _loadKeys() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final api = context.read<AppProvider>().api;
@@ -99,9 +100,18 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
     final supportedModelsCtl = TextEditingController(
       text: existing?.supportedModels ?? '',
     );
+    final rpmCtl = TextEditingController(
+      text: existing?.rateLimitRPM.toString() ?? '0',
+    );
+    final tpmCtl = TextEditingController(
+      text: existing?.rateLimitTPM.toString() ?? '0',
+    );
+    final perModelQuotaCtl = TextEditingController(
+      text: existing?.perModelQuotaJson ?? '',
+    );
     bool enabled = existing?.enabled ?? true;
 
-    final result = await showDialog<bool>(
+    final result = await showCupertinoDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => CupertinoAlertDialog(
@@ -110,72 +120,107 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
             padding: const EdgeInsets.only(top: 8),
             child: Material(
               color: Colors.transparent,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CupertinoTextField(
-                    controller: nameCtl,
-                    placeholder: loc.t('name'),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey5.resolveFrom(ctx),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CupertinoTextField(
+                      controller: nameCtl,
+                      placeholder: loc.t('name'),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMd),
-                  CupertinoTextField(
-                    controller: maxCostCtl,
-                    placeholder: loc.t('max_cost'),
-                    prefix: Padding(
-                      padding: const EdgeInsets.only(left: 12),
-                      child: Text(
-                        '\$',
-                        style: TextStyle(
-                          color: CupertinoColors.systemGrey.resolveFrom(ctx),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: maxCostCtl,
+                      placeholder: loc.t('max_cost'),
+                      prefix: Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Text(
+                          '\$',
+                          style: TextStyle(
+                            color: CupertinoColors.systemGrey.resolveFrom(ctx),
+                          ),
                         ),
                       ),
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    keyboardType: TextInputType.number,
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey5.resolveFrom(ctx),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                    ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMd),
-                  CupertinoTextField(
-                    controller: expireAtCtl,
-                    placeholder: loc.t('expire_at'),
-                    padding: const EdgeInsets.all(12),
-                    keyboardType: TextInputType.number,
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey5.resolveFrom(ctx),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                    ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMd),
-                  CupertinoTextField(
-                    controller: supportedModelsCtl,
-                    placeholder: loc.t('supported_models'),
-                    padding: const EdgeInsets.all(12),
-                    maxLines: 2,
-                    decoration: BoxDecoration(
-                      color: CupertinoColors.systemGrey5.resolveFrom(ctx),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                    ),
-                  ),
-                  const SizedBox(height: AppTheme.spacingMd),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(loc.t('enabled')),
-                      CupertinoSwitch(
-                        value: enabled,
-                        onChanged: (v) => setDialogState(() => enabled = v),
+                      padding: const EdgeInsets.all(12),
+                      keyboardType: TextInputType.number,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: expireAtCtl,
+                      placeholder: loc.t('expire_at'),
+                      padding: const EdgeInsets.all(12),
+                      keyboardType: TextInputType.number,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: supportedModelsCtl,
+                      placeholder: loc.t('supported_models'),
+                      padding: const EdgeInsets.all(12),
+                      maxLines: 2,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: rpmCtl,
+                      placeholder: loc.t('rate_limit_rpm'),
+                      padding: const EdgeInsets.all(12),
+                      keyboardType: TextInputType.number,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: tpmCtl,
+                      placeholder: loc.t('rate_limit_tpm'),
+                      padding: const EdgeInsets.all(12),
+                      keyboardType: TextInputType.number,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: perModelQuotaCtl,
+                      placeholder: loc.t('per_model_quota'),
+                      padding: const EdgeInsets.all(12),
+                      maxLines: 2,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(loc.t('enabled')),
+                        CupertinoSwitch(
+                          value: enabled,
+                          onChanged: (v) => setDialogState(() => enabled = v),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -199,11 +244,17 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
     final maxCostText = maxCostCtl.text;
     final expireAtText = expireAtCtl.text;
     final supportedModels = supportedModelsCtl.text.trim();
+    final rpmText = rpmCtl.text;
+    final tpmText = tpmCtl.text;
+    final perModelQuota = perModelQuotaCtl.text.trim();
 
     nameCtl.dispose();
     maxCostCtl.dispose();
     expireAtCtl.dispose();
     supportedModelsCtl.dispose();
+    rpmCtl.dispose();
+    tpmCtl.dispose();
+    perModelQuotaCtl.dispose();
 
     if (result != true) return;
 
@@ -217,6 +268,9 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
         expireAt: int.tryParse(expireAtText) ?? 0,
         maxCost: double.tryParse(maxCostText) ?? 0,
         supportedModels: supportedModels,
+        rateLimitRPM: int.tryParse(rpmText) ?? 0,
+        rateLimitTPM: int.tryParse(tpmText) ?? 0,
+        perModelQuotaJson: perModelQuota,
       );
       if (isEdit) {
         await api.updateApiKey(key);
@@ -378,7 +432,7 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
                   ),
               ],
             ),
-            if (!_loading && _keys.isNotEmpty)
+            if (!_loading)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,

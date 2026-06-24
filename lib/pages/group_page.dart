@@ -39,6 +39,7 @@ class _GroupPageState extends State<GroupPage> {
   }
 
   Future<void> _loadData() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
       final api = context.read<AppProvider>().api;
@@ -315,7 +316,7 @@ class _GroupPageState extends State<GroupPage> {
       final status = result.passed ? 'PASS' : 'FAIL';
       final channelName = result.channelName.isNotEmpty
           ? result.channelName
-          : _channelDisplayName(result.channelId, '');
+          : _channelDisplayName(result.channelId, '', loc);
       buffer.writeln('$status  $channelName / ${result.modelName}');
       buffer.writeln('HTTP ${result.statusCode}  #${result.attempts}');
       if (result.message.isNotEmpty) {
@@ -448,6 +449,7 @@ class _GroupPageState extends State<GroupPage> {
               channelName: _channelDisplayName(
                 item.channelId,
                 channel?.channelName ?? '',
+                loc,
               ),
               modelName: item.modelName,
               enabled: channel?.enabled ?? true,
@@ -473,7 +475,7 @@ class _GroupPageState extends State<GroupPage> {
                 child: Text(
                   isExpanded
                       ? loc.t('collapse')
-                      : '+$remaining ${loc.t('show_more')}',
+                      : loc.t('show_more_count', {'count': '$remaining'}),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -627,6 +629,8 @@ class _GroupPageState extends State<GroupPage> {
                                       children: [
                                         Text(
                                           group.name,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: TextStyle(
                                             fontSize: 17,
                                             fontWeight: FontWeight.w600,
@@ -760,7 +764,7 @@ class _GroupPageState extends State<GroupPage> {
                   ),
               ],
             ),
-            if (!_loading)
+            if (!_loading && _groups.isNotEmpty)
               Positioned(
                 right: AppTheme.spacingLg,
                 bottom: 24,
@@ -846,6 +850,7 @@ class _GroupEditorSheetState extends State<_GroupEditorSheet> {
       text: existing?.sessionKeepTime.toString() ?? '0',
     );
     _searchCtl = TextEditingController();
+    final loc = context.read<AppProvider>().loc;
     _mode = existing?.mode ?? 5;
     _endpointType = normalizeGroupEndpointType(existing?.endpointType ?? '*');
     _selectedMembers =
@@ -854,6 +859,7 @@ class _GroupEditorSheetState extends State<_GroupEditorSheet> {
             .map(
               (item) => _GroupMemberDraft.fromGroupItem(
                 item,
+                loc: loc,
                 channel:
                     channelMap[_modelChannelKey(
                       item.channelId,
@@ -881,9 +887,10 @@ class _GroupEditorSheetState extends State<_GroupEditorSheet> {
     final key = _modelChannelKey(channel.channelId, channel.name);
     final exists = _selectedMembers.any((item) => item.key == key);
     if (exists) return;
+    final loc = context.read<AppProvider>().loc;
 
     setState(() {
-      _selectedMembers.add(_GroupMemberDraft.fromChannel(channel));
+      _selectedMembers.add(_GroupMemberDraft.fromChannel(channel, loc: loc));
     });
   }
 
@@ -893,10 +900,11 @@ class _GroupEditorSheetState extends State<_GroupEditorSheet> {
       (item) =>
           !selectedKeys.contains(_modelChannelKey(item.channelId, item.name)),
     );
+    final loc = context.read<AppProvider>().loc;
 
     setState(() {
       for (final item in candidates) {
-        _selectedMembers.add(_GroupMemberDraft.fromChannel(item));
+        _selectedMembers.add(_GroupMemberDraft.fromChannel(item, loc: loc));
       }
     });
   }
@@ -1565,6 +1573,7 @@ class _AvailableModelCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final loc = context.read<AppProvider>().loc;
 
     return AppCard(
       margin: const EdgeInsets.only(bottom: AppTheme.spacingSm),
@@ -1587,7 +1596,7 @@ class _AvailableModelCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  _channelDisplayName(model.channelId, model.channelName),
+                  _channelDisplayName(model.channelId, model.channelName, loc),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -1725,10 +1734,17 @@ class _GroupMemberDraft {
 
   String get key => _modelChannelKey(channelId, modelName);
 
-  factory _GroupMemberDraft.fromChannel(LLMChannel channel) {
+  factory _GroupMemberDraft.fromChannel(
+    LLMChannel channel, {
+    AppLocalizations? loc,
+  }) {
     return _GroupMemberDraft(
       channelId: channel.channelId,
-      channelName: _channelDisplayName(channel.channelId, channel.channelName),
+      channelName: _channelDisplayName(
+        channel.channelId,
+        channel.channelName,
+        loc,
+      ),
       modelName: channel.name,
       weight: 1,
       enabled: channel.enabled,
@@ -1738,6 +1754,7 @@ class _GroupMemberDraft {
   factory _GroupMemberDraft.fromGroupItem(
     GroupItem item, {
     LLMChannel? channel,
+    AppLocalizations? loc,
   }) {
     return _GroupMemberDraft(
       itemId: item.id,
@@ -1746,6 +1763,7 @@ class _GroupMemberDraft {
       channelName: _channelDisplayName(
         item.channelId,
         channel?.channelName ?? '',
+        loc,
       ),
       modelName: item.modelName,
       priority: item.priority,
@@ -1830,7 +1848,14 @@ Color _modeChipColor(int mode) {
 String _modelChannelKey(int channelId, String modelName) =>
     '$channelId::$modelName';
 
-String _channelDisplayName(int channelId, String channelName) {
+String _channelDisplayName(
+  int channelId,
+  String channelName, [
+  AppLocalizations? loc,
+]) {
   final trimmed = channelName.trim();
-  return trimmed.isNotEmpty ? trimmed : 'Channel $channelId';
+  if (trimmed.isNotEmpty) return trimmed;
+  return (loc ?? AppLocalizations(AppLocale.en)).t('channel_fallback_name', {
+    'id': '$channelId',
+  });
 }
