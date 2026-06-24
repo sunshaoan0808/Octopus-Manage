@@ -56,6 +56,11 @@ CLAUDE.md
 .omo/
 .workbuddy/
 
+# Project docs and reports
+IMPLEMENTATION_PLAN.md
+code_review_final_report.md
+server_client_diff_report*.md
+
 # Build artifacts and logs
 build_log.txt
 build_output.txt
