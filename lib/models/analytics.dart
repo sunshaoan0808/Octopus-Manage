@@ -55,6 +55,29 @@ class AnalyticsOverview {
   }
 }
 
+class AutoStrategySnapshotItem {
+  final String model;
+  final String bestChannel;
+  final double bestScore;
+  final String reason;
+
+  AutoStrategySnapshotItem({
+    this.model = '',
+    this.bestChannel = '',
+    this.bestScore = 0,
+    this.reason = '',
+  });
+
+  factory AutoStrategySnapshotItem.fromJson(Map<String, dynamic> json) {
+    return AutoStrategySnapshotItem(
+      model: parseString(json['model']),
+      bestChannel: parseString(json['best_channel']),
+      bestScore: parseDouble(json['best_score']),
+      reason: parseString(json['reason']),
+    );
+  }
+}
+
 class AnalyticsGroupHealthItem {
   final int groupId;
   final String groupName;
@@ -66,6 +89,10 @@ class AnalyticsGroupHealthItem {
   final int lastFailureAt;
   final int healthScore;
   final String status;
+  final List<String> failingChannels;
+  final String mode;
+  final List<int> channelIds;
+  final List<AutoStrategySnapshotItem> autoItems;
 
   AnalyticsGroupHealthItem({
     this.groupId = 0,
@@ -78,7 +105,13 @@ class AnalyticsGroupHealthItem {
     this.lastFailureAt = 0,
     this.healthScore = 0,
     this.status = '',
-  });
+    List<String>? failingChannels,
+    this.mode = '',
+    List<int>? channelIds,
+    List<AutoStrategySnapshotItem>? autoItems,
+  })  : failingChannels = failingChannels ?? [],
+        channelIds = channelIds ?? [],
+        autoItems = autoItems ?? [];
 
   factory AnalyticsGroupHealthItem.fromJson(Map<String, dynamic> json) {
     return AnalyticsGroupHealthItem(
@@ -92,6 +125,12 @@ class AnalyticsGroupHealthItem {
       lastFailureAt: parseInt(json['last_failure_at']),
       healthScore: parseInt(json['health_score']),
       status: parseString(json['status']),
+      failingChannels: parseStringList(json['failing_channels']),
+      mode: parseString(json['mode']),
+      channelIds: parseIntList(json['channel_ids']),
+      autoItems: parseJsonMapList(json['auto_items'])
+          .map(AutoStrategySnapshotItem.fromJson)
+          .toList(),
     );
   }
 }
@@ -220,6 +259,77 @@ class AnalyticsEvaluationSummary {
       cacheMissRequests: parseInt(json['cache_miss_requests']),
       bypassedRequests: parseInt(json['bypassed_requests']),
       storedResponses: parseInt(json['stored_responses']),
+    );
+  }
+}
+
+class AnalyticsChannelModelItem {
+  final int channelId;
+  final String channelName;
+  final String modelName;
+  final int requestCount;
+  final double successRate;
+  final double avgLatency;
+
+  AnalyticsChannelModelItem({
+    this.channelId = 0,
+    this.channelName = '',
+    this.modelName = '',
+    this.requestCount = 0,
+    this.successRate = 0,
+    this.avgLatency = 0,
+  });
+
+  factory AnalyticsChannelModelItem.fromJson(Map<String, dynamic> json) {
+    return AnalyticsChannelModelItem(
+      channelId: parseInt(json['channel_id']),
+      channelName: parseString(json['channel_name']),
+      modelName: parseString(json['model_name']),
+      requestCount: parseInt(json['request_count']),
+      successRate: parseDouble(json['success_rate']),
+      avgLatency: parseDouble(json['avg_latency']),
+    );
+  }
+}
+
+class HistogramBucket {
+  final String bucketLabel;
+  final int count;
+
+  HistogramBucket({
+    this.bucketLabel = '',
+    this.count = 0,
+  });
+
+  factory HistogramBucket.fromJson(Map<String, dynamic> json) {
+    return HistogramBucket(
+      bucketLabel: parseString(json['bucket_label']),
+      count: parseInt(json['count']),
+    );
+  }
+}
+
+class AnalyticsLatencyDistribution {
+  final List<HistogramBucket> buckets;
+  final double p50;
+  final double p95;
+  final double p99;
+
+  AnalyticsLatencyDistribution({
+    List<HistogramBucket>? buckets,
+    this.p50 = 0,
+    this.p95 = 0,
+    this.p99 = 0,
+  }) : buckets = buckets ?? [];
+
+  factory AnalyticsLatencyDistribution.fromJson(Map<String, dynamic> json) {
+    return AnalyticsLatencyDistribution(
+      buckets: parseJsonMapList(json['buckets'])
+          .map(HistogramBucket.fromJson)
+          .toList(),
+      p50: parseDouble(json['p50']),
+      p95: parseDouble(json['p95']),
+      p99: parseDouble(json['p99']),
     );
   }
 }

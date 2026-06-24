@@ -533,6 +533,37 @@ class OctopusApi {
     );
   }
 
+  Future<List<AnalyticsChannelModelItem>> getAnalyticsChannelModel({
+    String range = '7d',
+  }) async {
+    final res = await _api.get(
+      '/api/v1/analytics/channel-model',
+      query: {'range': range},
+    );
+    return parseJsonMapList(res['data'])
+        .map(AnalyticsChannelModelItem.fromJson)
+        .toList();
+  }
+
+  Future<AnalyticsLatencyDistribution> getAnalyticsLatencyDistribution({
+    String range = '7d',
+  }) async {
+    final res = await _api.get(
+      '/api/v1/analytics/latency-distribution',
+      query: {'range': range},
+    );
+    return AnalyticsLatencyDistribution.fromJson(
+      parseJsonMap(res['data']) ?? {},
+    );
+  }
+
+  Future<List<AutoStrategySnapshotItem>> getAnalyticsAutoStrategy() async {
+    final res = await _api.get('/api/v1/analytics/auto-strategy');
+    return parseJsonMapList(res['data'])
+        .map(AutoStrategySnapshotItem.fromJson)
+        .toList();
+  }
+
   // ====== Audit ======
   Future<List<AuditLog>> getAuditLogs({int page = 1, int pageSize = 50}) async {
     final res = await _api.get(

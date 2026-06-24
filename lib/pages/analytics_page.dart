@@ -25,6 +25,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   List<AnalyticsBreakdownItem> _models = [];
   List<AnalyticsBreakdownItem> _apiKeys = [];
   List<AnalyticsGroupHealthItem> _groupHealth = [];
+  List<AnalyticsChannelModelItem> _channelModelItems = [];
+  AnalyticsLatencyDistribution? _latencyDistribution;
+  List<AutoStrategySnapshotItem> _autoStrategyItems = [];
+  AnalyticsEvaluationSummary? _evaluation;
+  int _usageSubTab = 0;
   bool _loading = true;
 
   static const _ranges = ['1d', '7d', '30d', '90d'];
@@ -46,6 +51,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         api.getAnalyticsModelBreakdown(range: _range),
         api.getAnalyticsApiKeyBreakdown(range: _range),
         api.getAnalyticsGroupHealth(),
+        api.getAnalyticsChannelModel(range: _range),
+        api.getAnalyticsLatencyDistribution(range: _range),
+        api.getAnalyticsAutoStrategy(),
+        api.getAnalyticsEvaluation(),
       ]);
       if (mounted) {
         _overview = results[0] as AnalyticsOverview;
@@ -53,6 +62,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         _models = results[2] as List<AnalyticsBreakdownItem>;
         _apiKeys = results[3] as List<AnalyticsBreakdownItem>;
         _groupHealth = results[4] as List<AnalyticsGroupHealthItem>;
+        _channelModelItems = results[5] as List<AnalyticsChannelModelItem>;
+        _latencyDistribution = results[6] as AnalyticsLatencyDistribution;
+        _autoStrategyItems = results[7] as List<AutoStrategySnapshotItem>;
+        _evaluation = results[8] as AnalyticsEvaluationSummary;
       }
     } catch (e) {
       if (mounted) showErrorDialog(context, e.toString());
@@ -72,6 +85,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     if (c >= 1) return '\$${c.toStringAsFixed(1)}';
     if (c > 0) return '\$${c.toStringAsFixed(3)}';
     return '\$0';
+  }
+
+  String _fmtLatency(double ms) {
+    if (ms >= 1000) return '${(ms / 1000).toStringAsFixed(2)}s';
+    return '${ms.toStringAsFixed(0)}ms';
   }
 
   @override
@@ -142,32 +160,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                   ),
                 ),
               ),
-              // Group Health
-              if (_groupHealth.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: AppCard(
-                    margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingMd, AppTheme.spacingLg, 0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(loc.t('analytics_group_health'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: colorScheme.onSurface)),
-                        const SizedBox(height: AppTheme.spacingSm),
-                        ..._groupHealth.take(5).map((g) => Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Row(children: [
-                            Icon(g.status == 'healthy' ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.exclamationmark_circle_fill,
-                              size: 14, color: g.status == 'healthy' ? AppTheme.colorGreen : AppTheme.colorOrange),
-                            const SizedBox(width: 6),
-                            Expanded(child: Text(g.groupName, style: const TextStyle(fontSize: 14))),
-                            Text('${g.healthScore}%', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14,
-                              color: g.healthScore >= 80 ? AppTheme.colorGreen : AppTheme.colorOrange)),
-                          ]),
-                        )),
-                      ],
-                    ),
-                  ),
-                ),
-              // Breakdown tabs
+              // 6-tab segmented control
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingMd, AppTheme.spacingLg, 0),
@@ -175,16 +168,23 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     groupValue: _tab,
                     onValueChanged: (v) => setState(() => _tab = v),
                     children: {
-                      0: Padding(padding: const EdgeInsets.all(8), child: Text(loc.t('analytics_providers'), style: const TextStyle(fontSize: 12))),
-                      1: Padding(padding: const EdgeInsets.all(8), child: Text(loc.t('analytics_models'), style: const TextStyle(fontSize: 12))),
-                      2: Padding(padding: const EdgeInsets.all(8), child: Text(loc.t('api_keys'), style: const TextStyle(fontSize: 12))),
+                      0: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8), child: Text(loc.t('analytics_channel_model'), style: const TextStyle(fontSize: 11))),
+                      1: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8), child: Text(loc.t('analytics_providers'), style: const TextStyle(fontSize: 11))),
+                      2: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8), child: Text(loc.t('analytics_route_health'), style: const TextStyle(fontSize: 11))),
+                      3: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8), child: Text(loc.t('analytics_latency'), style: const TextStyle(fontSize: 11))),
+                      4: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8), child: Text(loc.t('analytics_evaluation'), style: const TextStyle(fontSize: 11))),
+                      5: Padding(padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8), child: Text(loc.t('analytics_cache'), style: const TextStyle(fontSize: 11))),
                     },
                   ),
                 ),
               ),
-              if (_tab == 0) _buildBreakdownList(_providers.map((p) => (p.channelName, p.enabled, p.metrics)).toList()),
-              if (_tab == 1) _buildBreakdownList(_models.map((m) => (m.modelName, true, m.metrics)).toList()),
-              if (_tab == 2) _buildBreakdownList(_apiKeys.map((k) => (k.name.isNotEmpty ? k.name : 'Key #${k.apiKeyId}', true, k.metrics)).toList()),
+              // Tab content
+              if (_tab == 0) _buildChannelModelTab(),
+              if (_tab == 1) _buildUsageTab(),
+              if (_tab == 2) _buildRouteHealthTab(),
+              if (_tab == 3) _buildLatencyTab(),
+              if (_tab == 4) _buildEvaluationTab(),
+              if (_tab == 5) _buildCacheTab(),
               const SliverPadding(padding: EdgeInsets.only(bottom: 32)),
             ],
           ],
@@ -193,9 +193,10 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  Widget _buildBreakdownList(List<(String, bool, AnalyticsMetrics)> items) {
+  // ── Tab 0: Channel×Model matrix ──
+  Widget _buildChannelModelTab() {
     final loc = context.read<AppProvider>().loc;
-    if (items.isEmpty) {
+    if (_channelModelItems.isEmpty) {
       return SliverFillRemaining(
         hasScrollBody: false,
         child: AppEmptyState(icon: CupertinoIcons.chart_bar, title: loc.t('no_data')),
@@ -203,6 +204,64 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     }
     return SliverList(
       delegate: SliverChildBuilderDelegate((ctx, i) {
+        final item = _channelModelItems[i];
+        final cs = Theme.of(context).colorScheme;
+        return AppListTile(
+          margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, 2, AppTheme.spacingLg, 0),
+          title: Row(children: [
+            Expanded(child: Text('${item.channelName} → ${item.modelName}',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: cs.onSurface))),
+          ]),
+          subtitle: Row(children: [
+            Text('${_fmtCount(item.requestCount)} req', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+            const SizedBox(width: 8),
+            Text(_fmtLatency(item.avgLatency), style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+            const SizedBox(width: 8),
+            Text('${item.successRate.toStringAsFixed(1)}%', style: TextStyle(fontSize: 12,
+              color: item.successRate >= 95 ? AppTheme.colorGreen : AppTheme.colorOrange)),
+          ]),
+        );
+      }, childCount: _channelModelItems.length),
+    );
+  }
+
+  // ── Tab 1: Usage breakdown (existing Providers/Models/APIKeys) ──
+  Widget _buildUsageTab() {
+    final loc = context.read<AppProvider>().loc;
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+            child: CupertinoSlidingSegmentedControl<int>(
+              groupValue: _usageSubTab,
+              onValueChanged: (v) => setState(() => _usageSubTab = v ?? 0),
+              children: {
+                0: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), child: Text(loc.t('analytics_providers'), style: const TextStyle(fontSize: 11))),
+                1: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), child: Text(loc.t('analytics_models'), style: const TextStyle(fontSize: 11))),
+                2: Padding(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6), child: Text(loc.t('api_keys'), style: const TextStyle(fontSize: 11))),
+              },
+            ),
+          ),
+          if (_usageSubTab == 0) _buildBreakdownColumn(_providers.map((p) => (p.channelName, p.enabled, p.metrics)).toList()),
+          if (_usageSubTab == 1) _buildBreakdownColumn(_models.map((m) => (m.modelName, true, m.metrics)).toList()),
+          if (_usageSubTab == 2) _buildBreakdownColumn(_apiKeys.map((k) => (k.name.isNotEmpty ? k.name : 'Key #${k.apiKeyId}', true, k.metrics)).toList()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBreakdownColumn(List<(String, bool, AnalyticsMetrics)> items) {
+    final loc = context.read<AppProvider>().loc;
+    if (items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48),
+        child: AppEmptyState(icon: CupertinoIcons.chart_bar, title: loc.t('no_data')),
+      );
+    }
+    return Column(
+      children: List.generate(items.length, (i) {
         final (name, enabled, metrics) = items[i];
         final cs = Theme.of(context).colorScheme;
         return AppListTile(
@@ -222,7 +281,264 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               color: metrics.successRate >= 95 ? AppTheme.colorGreen : AppTheme.colorOrange)),
           ]),
         );
-      }, childCount: items.length),
+      }),
+    );
+  }
+
+  // ── Tab 2: Route Health (existing group health + auto strategy) ──
+  Widget _buildRouteHealthTab() {
+    final loc = context.read<AppProvider>().loc;
+    final cs = Theme.of(context).colorScheme;
+    if (_groupHealth.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: AppEmptyState(icon: CupertinoIcons.heart, title: loc.t('no_data')),
+      );
+    }
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ..._groupHealth.map((g) => AppCard(
+            margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Icon(g.status == 'healthy' ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.exclamationmark_circle_fill,
+                    size: 16, color: g.status == 'healthy' ? AppTheme.colorGreen : AppTheme.colorOrange),
+                  const SizedBox(width: 6),
+                  Expanded(child: Text(g.groupName, style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface))),
+                  Text('${g.healthScore}%', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15,
+                    color: g.healthScore >= 80 ? AppTheme.colorGreen : AppTheme.colorOrange)),
+                ]),
+                if (g.mode.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('${loc.t('mode')}: ${g.mode}', style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                ],
+                if (g.failingChannels.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('${loc.t('analytics_failing_channels')}: ${g.failingChannels.join(', ')}',
+                    style: TextStyle(fontSize: 12, color: cs.error)),
+                ],
+                if (g.autoItems.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(loc.t('analytics_auto_strategy'), style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  ...g.autoItems.map((a) => Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(children: [
+                      Expanded(child: Text(a.model, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant))),
+                      Text(a.bestChannel, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant)),
+                      const SizedBox(width: 8),
+                      Text(a.reason, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                    ]),
+                  )),
+                ],
+              ],
+            ),
+          )),
+          // Global auto strategy snapshot
+          if (_autoStrategyItems.isNotEmpty)
+            AppCard(
+              margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(loc.t('analytics_auto_strategy'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                  const SizedBox(height: AppTheme.spacingSm),
+                  ..._autoStrategyItems.map((a) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(children: [
+                      Expanded(child: Text(a.model, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: cs.onSurface))),
+                      Text(a.bestChannel, style: TextStyle(fontSize: 12, color: AppTheme.colorBlue)),
+                      const SizedBox(width: 8),
+                      Text(a.reason, style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant)),
+                    ]),
+                  )),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ── Tab 3: Latency distribution ──
+  Widget _buildLatencyTab() {
+    final loc = context.read<AppProvider>().loc;
+    final cs = Theme.of(context).colorScheme;
+    final dist = _latencyDistribution;
+    if (dist == null || dist.buckets.isEmpty) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: AppEmptyState(icon: CupertinoIcons.clock, title: loc.t('no_data')),
+      );
+    }
+
+    final maxCount = dist.buckets.fold<int>(0, (m, b) => b.count > m ? b.count : m);
+
+    return SliverToBoxAdapter(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Percentile summary card
+          AppCard(
+            margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(loc.t('analytics_latency'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                const SizedBox(height: AppTheme.spacingMd),
+                Row(children: [
+                  _metricBox(loc.t('analytics_p50'), _fmtLatency(dist.p50)),
+                  _metricBox(loc.t('analytics_p95'), _fmtLatency(dist.p95)),
+                  _metricBox(loc.t('analytics_p99'), _fmtLatency(dist.p99)),
+                ]),
+              ],
+            ),
+          ),
+          // Histogram
+          AppCard(
+            margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(loc.t('analytics_distribution'), style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: cs.onSurface)),
+                const SizedBox(height: AppTheme.spacingSm),
+                ...dist.buckets.map((b) {
+                  final ratio = maxCount > 0 ? b.count / maxCount : 0.0;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(children: [
+                      SizedBox(width: 70, child: Text(b.bucketLabel, style: TextStyle(fontSize: 12, color: cs.onSurfaceVariant))),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: ratio,
+                            minHeight: 14,
+                            backgroundColor: cs.surfaceContainerHighest,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.colorBlue),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(width: 48, child: Text(_fmtCount(b.count), style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: cs.onSurface), textAlign: TextAlign.right)),
+                    ]),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Tab 4: Evaluation ──
+  Widget _buildEvaluationTab() {
+    final loc = context.read<AppProvider>().loc;
+    final cs = Theme.of(context).colorScheme;
+    final ev = _evaluation;
+    if (ev == null) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: AppEmptyState(icon: CupertinoIcons.checkmark_seal, title: loc.t('no_data')),
+      );
+    }
+    return SliverToBoxAdapter(
+      child: AppCard(
+        margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(loc.t('analytics_evaluation'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: cs.onSurface)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: ev.enabled ? AppTheme.colorGreen.withValues(alpha: 0.15) : cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(ev.enabled ? loc.t('enabled') : loc.t('disabled'),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                    color: ev.enabled ? AppTheme.colorGreen : cs.onSurfaceVariant)),
+              ),
+            ]),
+            const SizedBox(height: AppTheme.spacingMd),
+            _infoRow(loc.t('evaluated_requests'), _fmtCount(ev.evaluatedRequests)),
+            _infoRow(loc.t('cache_hit_responses'), _fmtCount(ev.cacheHitResponses)),
+            _infoRow(loc.t('cache_miss_requests'), _fmtCount(ev.cacheMissRequests)),
+            _infoRow(loc.t('bypassed_requests'), _fmtCount(ev.bypassedRequests)),
+            _infoRow(loc.t('stored_responses'), _fmtCount(ev.storedResponses)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Tab 5: Cache (semantic cache stats) ──
+  Widget _buildCacheTab() {
+    final loc = context.read<AppProvider>().loc;
+    final cs = Theme.of(context).colorScheme;
+    final ev = _evaluation;
+    if (ev == null) {
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: AppEmptyState(icon: CupertinoIcons.archivebox, title: loc.t('no_data')),
+      );
+    }
+    return SliverToBoxAdapter(
+      child: AppCard(
+        margin: const EdgeInsets.fromLTRB(AppTheme.spacingLg, AppTheme.spacingSm, AppTheme.spacingLg, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(loc.t('analytics_cache'), style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: cs.onSurface)),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: ev.runtimeEnabled ? AppTheme.colorGreen.withValues(alpha: 0.15) : cs.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(ev.runtimeEnabled ? loc.t('enabled') : loc.t('disabled'),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                    color: ev.runtimeEnabled ? AppTheme.colorGreen : cs.onSurfaceVariant)),
+              ),
+            ]),
+            const SizedBox(height: AppTheme.spacingMd),
+            Row(children: [
+              _metricBox(loc.t('ops_cache_entries'), _fmtCount(ev.currentEntries)),
+              _metricBox(loc.t('ops_cache_hit_rate'), '${(ev.hitRate * 100).toStringAsFixed(1)}%'),
+              _metricBox(loc.t('ops_cache_usage_rate'), '${(ev.usageRate * 100).toStringAsFixed(1)}%'),
+            ]),
+            const SizedBox(height: AppTheme.spacingMd),
+            _infoRow(loc.t('ops_cache_hits'), _fmtCount(ev.hits)),
+            _infoRow(loc.t('ops_cache_misses'), _fmtCount(ev.misses)),
+            _infoRow('TTL', '${ev.ttlSeconds}s'),
+            _infoRow(loc.t('setting_semantic_cache_max_entries'), _fmtCount(ev.maxEntries)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ── Shared helpers ──
+
+  Widget _infoRow(String label, String value) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 13, color: cs.onSurfaceVariant)),
+          Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface)),
+        ],
+      ),
     );
   }
 
