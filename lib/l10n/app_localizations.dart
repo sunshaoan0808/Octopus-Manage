@@ -1193,6 +1193,55 @@ class AppLocalizations {
       AppLocale.zh: '导入功能即将推出',
     },
 
+    // WebDAV Backup
+    'webdav': {AppLocale.en: 'WebDAV Backup', AppLocale.zh: 'WebDAV 备份'},
+    'webdav_base_url': {AppLocale.en: 'Base URL', AppLocale.zh: '服务器地址'},
+    'webdav_username': {AppLocale.en: 'Username', AppLocale.zh: '用户名'},
+    'webdav_password': {AppLocale.en: 'Password', AppLocale.zh: '密码'},
+    'webdav_remote_path': {AppLocale.en: 'Remote Path', AppLocale.zh: '远程路径'},
+    'webdav_auto_backup': {AppLocale.en: 'Auto Backup', AppLocale.zh: '自动备份'},
+    'webdav_interval_disabled': {AppLocale.en: 'Disabled', AppLocale.zh: '禁用'},
+    'webdav_interval_hourly': {AppLocale.en: 'Hourly', AppLocale.zh: '每小时'},
+    'webdav_interval_daily': {AppLocale.en: 'Daily', AppLocale.zh: '每天'},
+    'webdav_interval_weekly': {AppLocale.en: 'Weekly', AppLocale.zh: '每周'},
+    'webdav_max_backups': {AppLocale.en: 'Max Backups', AppLocale.zh: '最大备份数'},
+    'webdav_test': {AppLocale.en: 'Test', AppLocale.zh: '测试连接'},
+    'webdav_backup_now': {AppLocale.en: 'Backup Now', AppLocale.zh: '立即备份'},
+    'webdav_backups': {AppLocale.en: 'Remote Backups', AppLocale.zh: '远程备份列表'},
+    'webdav_restore': {AppLocale.en: 'Restore', AppLocale.zh: '恢复'},
+    'webdav_delete': {AppLocale.en: 'Delete', AppLocale.zh: '删除'},
+    'webdav_test_success': {AppLocale.en: 'Connection successful', AppLocale.zh: '连接成功'},
+    'webdav_test_failed': {AppLocale.en: 'Connection failed', AppLocale.zh: '连接失败'},
+    'webdav_backup_success': {AppLocale.en: 'Backup completed', AppLocale.zh: '备份完成'},
+    'webdav_backup_failed': {AppLocale.en: 'Backup failed', AppLocale.zh: '备份失败'},
+    'webdav_no_backups': {AppLocale.en: 'No backups found', AppLocale.zh: '暂无备份'},
+    'webdav_restore_confirm': {
+      AppLocale.en: 'Restore backup "{name}"?',
+      AppLocale.zh: '恢复备份 "{name}"？',
+    },
+    'webdav_delete_confirm': {
+      AppLocale.en: 'Delete backup "{name}"?',
+      AppLocale.zh: '删除备份 "{name}"？',
+    },
+
+    // WebAuthn / Passkey
+    'webauthn': {AppLocale.en: 'WebAuthn', AppLocale.zh: 'WebAuthn'},
+    'webauthn_rp_id': {AppLocale.en: 'RP ID', AppLocale.zh: 'RP ID'},
+    'webauthn_rp_name': {AppLocale.en: 'RP Name', AppLocale.zh: 'RP 名称'},
+    'webauthn_origins': {AppLocale.en: 'Allowed Origins', AppLocale.zh: '允许来源'},
+    'webauthn_origins_hint': {
+      AppLocale.en: 'Comma-separated URLs',
+      AppLocale.zh: '逗号分隔的 URL',
+    },
+    'webauthn_credentials': {AppLocale.en: 'Credentials', AppLocale.zh: '凭证列表'},
+    'webauthn_register': {AppLocale.en: 'Register', AppLocale.zh: '注册凭证'},
+    'webauthn_delete': {AppLocale.en: 'Delete', AppLocale.zh: '删除'},
+    'webauthn_delete_confirm': {
+      AppLocale.en: 'Delete this credential?',
+      AppLocale.zh: '删除此凭证？',
+    },
+    'webauthn_no_credentials': {AppLocale.en: 'No credentials', AppLocale.zh: '暂无凭证'},
+
     // Errors
     'error': {AppLocale.en: 'Error', AppLocale.zh: '错误'},
     'operation_failed': {

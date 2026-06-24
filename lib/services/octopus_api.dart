@@ -980,6 +980,62 @@ class OctopusApi {
     );
   }
 
+  // ====== WebDAV Backup ======
+  Future<Map<String, dynamic>> getWebDAVConfig() async {
+    final res = await _api.get('/api/v1/webdav/config');
+    return parseJsonMap(res['data']) ?? {};
+  }
+
+  Future<void> setWebDAVConfig(Map<String, dynamic> config) async {
+    await _api.post('/api/v1/webdav/config', body: config);
+  }
+
+  Future<bool> testWebDAV() async {
+    final res = await _api.post('/api/v1/webdav/test');
+    final data = parseJsonMap(res['data']) ?? {};
+    return parseBool(data['success'] ?? data['ok']);
+  }
+
+  Future<void> triggerWebDAVBackup() async {
+    await _api.post('/api/v1/webdav/backup');
+  }
+
+  Future<List<Map<String, dynamic>>> listWebDAVBackups() async {
+    final res = await _api.get('/api/v1/webdav/backups');
+    return parseJsonMapList(res['data'])
+        .map((e) => parseJsonMap(e) ?? <String, dynamic>{})
+        .toList();
+  }
+
+  Future<void> restoreWebDAVBackup(String filename) async {
+    await _api.post('/api/v1/webdav/restore', body: {'filename': filename});
+  }
+
+  Future<void> deleteWebDAVBackup(String filename) async {
+    await _api.post('/api/v1/webdav/delete', body: {'filename': filename});
+  }
+
+  // ====== WebAuthn ======
+  Future<Map<String, dynamic>> getWebAuthnConfig() async {
+    final res = await _api.get('/api/v1/webauthn/config');
+    return parseJsonMap(res['data']) ?? {};
+  }
+
+  Future<void> setWebAuthnConfig(Map<String, dynamic> config) async {
+    await _api.post('/api/v1/webauthn/config', body: config);
+  }
+
+  Future<List<Map<String, dynamic>>> listWebAuthnCredentials() async {
+    final res = await _api.get('/api/v1/webauthn/credentials');
+    return parseJsonMapList(res['data'])
+        .map((e) => parseJsonMap(e) ?? <String, dynamic>{})
+        .toList();
+  }
+
+  Future<void> deleteWebAuthnCredential(String id) async {
+    await _api.delete('/api/v1/webauthn/credential/$id');
+  }
+
   // ====== Update ======
   Future<String> getCurrentVersion() async {
     final res = await _api.get('/api/v1/update/now-version');

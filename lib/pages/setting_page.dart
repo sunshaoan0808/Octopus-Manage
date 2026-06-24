@@ -47,6 +47,18 @@ class _SettingPageState extends State<SettingPage> {
   bool _deletingGroups = false;
   bool _loggingOut = false;
 
+  // WebDAV state
+  Map<String, dynamic> _webdavConfig = {};
+  List<Map<String, dynamic>> _webdavBackups = [];
+  bool _webdavLoading = false;
+  bool _webdavTesting = false;
+  bool _webdavBackingUp = false;
+
+  // WebAuthn state
+  Map<String, dynamic> _webauthnConfig = {};
+  List<Map<String, dynamic>> _webauthnCredentials = [];
+  bool _webauthnLoading = false;
+
   bool get _hasUpdate =>
       _latestVersion.isNotEmpty &&
       _version.isNotEmpty &&
@@ -141,6 +153,9 @@ class _SettingPageState extends State<SettingPage> {
         _updateError = updateError;
         _loading = false;
       });
+      // Load WebDAV and WebAuthn in background
+      _loadWebDAV();
+      _loadWebAuthn();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -598,6 +613,287 @@ class _SettingPageState extends State<SettingPage> {
     }
   }
 
+  // ====== WebDAV ======
+  Future<void> _loadWebDAV() async {
+    if (_webdavLoading) return;
+    setState(() => _webdavLoading = true);
+    try {
+      final api = context.read<AppProvider>().api;
+      final configFuture = api.getWebDAVConfig();
+      final backupsFuture = api.listWebDAVBackups();
+      final config = await configFuture;
+      List<Map<String, dynamic>> backups = [];
+      try {
+        backups = await backupsFuture;
+      } catch (_) {}
+      if (!mounted) return;
+      setState(() {
+        _webdavConfig = config;
+        _webdavBackups = backups;
+        _webdavLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _webdavLoading = false);
+    }
+  }
+
+  Future<void> _saveWebDAVConfig() async {
+    try {
+      final api = context.read<AppProvider>().api;
+      await api.setWebDAVConfig(_webdavConfig);
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    }
+  }
+
+  Future<void> _editWebDAVField(String key, String title, AppLocalizations loc,
+      {String? hint, TextInputType? keyboardType, bool obscure = false}) async {
+    final controller =
+        TextEditingController(text: (_webdavConfig[key] ?? '').toString());
+    final result = await showCupertinoDialog<String>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(title),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: CupertinoTextField(
+            controller: controller,
+            autofocus: true,
+            obscureText: obscure,
+            placeholder: hint ?? loc.t('enter_value'),
+            padding: const EdgeInsets.all(12),
+            keyboardType: keyboardType,
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.brightness == Brightness.light
+                  ? const Color(0xFFE5E5EA)
+                  : const Color(0xFF3A3A3C),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+            ),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(loc.t('cancel')),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(loc.t('save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null || !mounted) return;
+    setState(() => _webdavConfig[key] = result);
+    await _saveWebDAVConfig();
+  }
+
+  Future<void> _testWebDAV(AppLocalizations loc) async {
+    if (_webdavTesting) return;
+    setState(() => _webdavTesting = true);
+    try {
+      final api = context.read<AppProvider>().api;
+      final ok = await api.testWebDAV();
+      if (!mounted) return;
+      await AppTextDialog.show(
+        context: context,
+        title: loc.t('webdav_test'),
+        content: ok ? loc.t('webdav_test_success') : loc.t('webdav_test_failed'),
+        buttonText: loc.t('ok'),
+        selectable: false,
+      );
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, loc.t('webdav_test_failed'));
+      }
+    } finally {
+      if (mounted) setState(() => _webdavTesting = false);
+    }
+  }
+
+  Future<void> _triggerWebDAVBackup(AppLocalizations loc) async {
+    if (_webdavBackingUp) return;
+    setState(() => _webdavBackingUp = true);
+    try {
+      final api = context.read<AppProvider>().api;
+      await api.triggerWebDAVBackup();
+      if (!mounted) return;
+      await AppTextDialog.show(
+        context: context,
+        title: loc.t('webdav_backup_now'),
+        content: loc.t('webdav_backup_success'),
+        buttonText: loc.t('ok'),
+        selectable: false,
+      );
+      await _loadWebDAV();
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, loc.t('webdav_backup_failed'));
+      }
+    } finally {
+      if (mounted) setState(() => _webdavBackingUp = false);
+    }
+  }
+
+  Future<void> _restoreWebDAVBackup(String filename, AppLocalizations loc) async {
+    final confirmed = await AppConfirmDialog.show(
+      context: context,
+      title: loc.t('webdav_restore'),
+      content: loc.t('webdav_restore_confirm', {'name': filename}),
+      confirmText: loc.t('webdav_restore'),
+      cancelText: loc.t('cancel'),
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      final api = context.read<AppProvider>().api;
+      await api.restoreWebDAVBackup(filename);
+      await _loadWebDAV();
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    }
+  }
+
+  Future<void> _deleteWebDAVBackup(String filename, AppLocalizations loc) async {
+    final confirmed = await AppConfirmDialog.show(
+      context: context,
+      title: loc.t('webdav_delete'),
+      content: loc.t('webdav_delete_confirm', {'name': filename}),
+      confirmText: loc.t('delete'),
+      cancelText: loc.t('cancel'),
+      isDanger: true,
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      final api = context.read<AppProvider>().api;
+      await api.deleteWebDAVBackup(filename);
+      await _loadWebDAV();
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    }
+  }
+
+  String _webdavIntervalLabel(String value, AppLocalizations loc) {
+    switch (value) {
+      case 'hourly':
+        return loc.t('webdav_interval_hourly');
+      case 'daily':
+        return loc.t('webdav_interval_daily');
+      case 'weekly':
+        return loc.t('webdav_interval_weekly');
+      default:
+        return loc.t('webdav_interval_disabled');
+    }
+  }
+
+  // ====== WebAuthn ======
+  Future<void> _loadWebAuthn() async {
+    if (_webauthnLoading) return;
+    setState(() => _webauthnLoading = true);
+    try {
+      final api = context.read<AppProvider>().api;
+      final configFuture = api.getWebAuthnConfig();
+      final credsFuture = api.listWebAuthnCredentials();
+      final config = await configFuture;
+      List<Map<String, dynamic>> creds = [];
+      try {
+        creds = await credsFuture;
+      } catch (_) {}
+      if (!mounted) return;
+      setState(() {
+        _webauthnConfig = config;
+        _webauthnCredentials = creds;
+        _webauthnLoading = false;
+      });
+    } catch (e) {
+      if (mounted) setState(() => _webauthnLoading = false);
+    }
+  }
+
+  Future<void> _saveWebAuthnConfig() async {
+    try {
+      final api = context.read<AppProvider>().api;
+      await api.setWebAuthnConfig(_webauthnConfig);
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    }
+  }
+
+  Future<void> _editWebAuthnField(String key, String title, AppLocalizations loc,
+      {String? hint}) async {
+    final controller =
+        TextEditingController(text: (_webauthnConfig[key] ?? '').toString());
+    final result = await showCupertinoDialog<String>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: Text(title),
+        content: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: CupertinoTextField(
+            controller: controller,
+            autofocus: true,
+            placeholder: hint ?? loc.t('enter_value'),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.brightness == Brightness.light
+                  ? const Color(0xFFE5E5EA)
+                  : const Color(0xFF3A3A3C),
+              borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+            ),
+          ),
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(loc.t('cancel')),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: Text(loc.t('save')),
+          ),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null || !mounted) return;
+    setState(() => _webauthnConfig[key] = result);
+    await _saveWebAuthnConfig();
+  }
+
+  Future<void> _deleteWebAuthnCredential(
+      Map<String, dynamic> cred, AppLocalizations loc) async {
+    final id = cred['id']?.toString() ?? '';
+    if (id.isEmpty) return;
+    final confirmed = await AppConfirmDialog.show(
+      context: context,
+      title: loc.t('webauthn_delete'),
+      content: loc.t('webauthn_delete_confirm'),
+      confirmText: loc.t('delete'),
+      cancelText: loc.t('cancel'),
+      isDanger: true,
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      final api = context.read<AppProvider>().api;
+      await api.deleteWebAuthnCredential(id);
+      await _loadWebAuthn();
+    } catch (e) {
+      if (mounted) {
+        await showErrorDialog(context, e.toString());
+      }
+    }
+  }
+
   String _formatDateTimeValue(String value, AppLocalizations loc) {
     if (value.trim().isEmpty) return loc.t('never');
     final parsed = DateTime.tryParse(value);
@@ -1028,6 +1324,45 @@ class _SettingPageState extends State<SettingPage> {
                       onTap: () => _editAIRouteServices(loc),
                     ),
                   ],
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _WebDAVCard(
+                  config: _webdavConfig,
+                  backups: _webdavBackups,
+                  loading: _webdavLoading,
+                  testing: _webdavTesting,
+                  backingUp: _webdavBackingUp,
+                  loc: loc,
+                  colorScheme: colorScheme,
+                  onRefresh: _loadWebDAV,
+                  onEditField: _editWebDAVField,
+                  onIntervalChanged: (value) async {
+                    setState(() => _webdavConfig['interval'] = value);
+                    await _saveWebDAVConfig();
+                  },
+                  onMaxBackupsChanged: (value) async {
+                    setState(() => _webdavConfig['max_backups'] = value);
+                    await _saveWebDAVConfig();
+                  },
+                  onTest: () => _testWebDAV(loc),
+                  onBackupNow: () => _triggerWebDAVBackup(loc),
+                  onRestore: (fn) => _restoreWebDAVBackup(fn, loc),
+                  onDelete: (fn) => _deleteWebDAVBackup(fn, loc),
+                  intervalLabel: _webdavIntervalLabel,
+                ),
+              ),
+              SliverToBoxAdapter(
+                child: _WebAuthnCard(
+                  config: _webauthnConfig,
+                  credentials: _webauthnCredentials,
+                  loading: _webauthnLoading,
+                  loc: loc,
+                  colorScheme: colorScheme,
+                  onRefresh: _loadWebAuthn,
+                  onEditField: _editWebAuthnField,
+                  onDeleteCredential: (cred) =>
+                      _deleteWebAuthnCredential(cred, loc),
                 ),
               ),
               SliverToBoxAdapter(
@@ -1878,6 +2213,470 @@ class _PasswordChangeDialogState extends State<_PasswordChangeDialog> {
           ),
           child: Text(widget.loc.t('save')),
         ),
+      ],
+    );
+  }
+}
+
+// ====== WebDAV Card ======
+class _WebDAVCard extends StatelessWidget {
+  final Map<String, dynamic> config;
+  final List<Map<String, dynamic>> backups;
+  final bool loading;
+  final bool testing;
+  final bool backingUp;
+  final AppLocalizations loc;
+  final ColorScheme colorScheme;
+  final VoidCallback onRefresh;
+  final Future<void> Function(String key, String title, AppLocalizations loc,
+      {String? hint, TextInputType? keyboardType, bool obscure}) onEditField;
+  final ValueChanged<String> onIntervalChanged;
+  final ValueChanged<int> onMaxBackupsChanged;
+  final VoidCallback onTest;
+  final VoidCallback onBackupNow;
+  final ValueChanged<String> onRestore;
+  final ValueChanged<String> onDelete;
+  final String Function(String, AppLocalizations) intervalLabel;
+
+  const _WebDAVCard({
+    required this.config,
+    required this.backups,
+    required this.loading,
+    required this.testing,
+    required this.backingUp,
+    required this.loc,
+    required this.colorScheme,
+    required this.onRefresh,
+    required this.onEditField,
+    required this.onIntervalChanged,
+    required this.onMaxBackupsChanged,
+    required this.onTest,
+    required this.onBackupNow,
+    required this.onRestore,
+    required this.onDelete,
+    required this.intervalLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return _SettingsActionCard(
+      icon: CupertinoIcons.cloud,
+      title: loc.t('webdav'),
+      margin: const EdgeInsets.fromLTRB(
+        AppTheme.spacingLg,
+        AppTheme.spacingLg,
+        AppTheme.spacingLg,
+        0,
+      ),
+      children: [
+        if (loading)
+          const Padding(
+            padding: EdgeInsets.all(AppTheme.spacingMd),
+            child: Center(child: CupertinoActivityIndicator()),
+          )
+        else ...[
+          _ValueActionRow(
+            title: loc.t('webdav_base_url'),
+            value: (config['base_url'] ?? '').toString().isEmpty
+                ? loc.t('empty')
+                : (config['base_url'] ?? '').toString(),
+            onTap: () => onEditField(
+              'base_url',
+              loc.t('webdav_base_url'),
+              loc,
+              hint: 'https://dav.example.com',
+              keyboardType: TextInputType.url,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          _ValueActionRow(
+            title: loc.t('webdav_username'),
+            value: (config['username'] ?? '').toString().isEmpty
+                ? loc.t('empty')
+                : (config['username'] ?? '').toString(),
+            onTap: () => onEditField(
+              'username',
+              loc.t('webdav_username'),
+              loc,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          _ValueActionRow(
+            title: loc.t('webdav_password'),
+            value: (config['password'] ?? '').toString().isEmpty
+                ? loc.t('empty')
+                : '••••••',
+            onTap: () => onEditField(
+              'password',
+              loc.t('webdav_password'),
+              loc,
+              obscure: true,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          _ValueActionRow(
+            title: loc.t('webdav_remote_path'),
+            value: (config['remote_path'] ?? '/').toString(),
+            onTap: () => onEditField(
+              'remote_path',
+              loc.t('webdav_remote_path'),
+              loc,
+              hint: '/backups',
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          // Interval dropdown
+          GestureDetector(
+            onTap: () {
+              final intervals = ['disabled', 'hourly', 'daily', 'weekly'];
+              final current = (config['interval'] ?? 'disabled').toString();
+              final idx = intervals.indexOf(current);
+              final next = intervals[(idx + 1) % intervals.length];
+              onIntervalChanged(next);
+            },
+            child: Row(
+              children: [
+                Expanded(child: Text(loc.t('webdav_auto_backup'))),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      intervalLabel(
+                        (config['interval'] ?? 'disabled').toString(),
+                        loc,
+                      ),
+                      style: theme.textTheme.caption?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(width: AppTheme.spacingSm),
+                    Icon(
+                      CupertinoIcons.chevron_right,
+                      size: 16,
+                      color:
+                          colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          _ValueActionRow(
+            title: loc.t('webdav_max_backups'),
+            value: (config['max_backups'] ?? 10).toString(),
+            onTap: () async {
+              final controller = TextEditingController(
+                  text: (config['max_backups'] ?? 10).toString());
+              final result = await showCupertinoDialog<String>(
+                context: context,
+                builder: (ctx) => CupertinoAlertDialog(
+                  title: Text(loc.t('webdav_max_backups')),
+                  content: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: CupertinoTextField(
+                      controller: controller,
+                      autofocus: true,
+                      keyboardType: TextInputType.number,
+                      placeholder: '10',
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(ctx).colorScheme.brightness ==
+                                Brightness.light
+                            ? const Color(0xFFE5E5EA)
+                            : const Color(0xFF3A3A3C),
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                  ),
+                  actions: [
+                    CupertinoDialogAction(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(loc.t('cancel')),
+                    ),
+                    CupertinoDialogAction(
+                      isDefaultAction: true,
+                      onPressed: () => Navigator.pop(ctx, controller.text),
+                      child: Text(loc.t('save')),
+                    ),
+                  ],
+                ),
+              );
+              controller.dispose();
+              if (result != null) {
+                final parsed = int.tryParse(result.trim());
+                if (parsed != null && parsed > 0) {
+                  onMaxBackupsChanged(parsed);
+                }
+              }
+            },
+          ),
+          const SizedBox(height: AppTheme.spacingMd),
+          // Test & Backup buttons
+          Row(
+            children: [
+              Expanded(
+                child: CupertinoButton(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  color: colorScheme.secondaryContainer,
+                  onPressed: testing ? null : onTest,
+                  child: testing
+                      ? const CupertinoActivityIndicator()
+                      : Text(
+                          loc.t('webdav_test'),
+                          style: TextStyle(
+                            color: colorScheme.onSecondaryContainer,
+                          ),
+                        ),
+                ),
+              ),
+              const SizedBox(width: AppTheme.spacingMd),
+              Expanded(
+                child: CupertinoButton.filled(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  onPressed: backingUp ? null : onBackupNow,
+                  child: backingUp
+                      ? const CupertinoActivityIndicator()
+                      : Text(loc.t('webdav_backup_now')),
+                ),
+              ),
+            ],
+          ),
+          // Remote backups list
+          if (backups.isNotEmpty) ...[
+            const SizedBox(height: AppTheme.spacingMd),
+            Text(
+              loc.t('webdav_backups'),
+              style: theme.textTheme.caption?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacingSm),
+            ...backups.map((backup) {
+              final filename = backup['filename']?.toString() ??
+                  backup['name']?.toString() ??
+                  '';
+              final size = backup['size']?.toString() ?? '';
+              final date = backup['modified']?.toString() ??
+                  backup['created_at']?.toString() ??
+                  '';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            filename,
+                            style: const TextStyle(fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (date.isNotEmpty || size.isNotEmpty)
+                            Text(
+                              [date, size].where((s) => s.isNotEmpty).join(' · '),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      onPressed: () => onRestore(filename),
+                      child: Text(
+                        loc.t('webdav_restore'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      onPressed: () => onDelete(filename),
+                      child: Text(
+                        loc.t('webdav_delete'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+// ====== WebAuthn Card ======
+class _WebAuthnCard extends StatelessWidget {
+  final Map<String, dynamic> config;
+  final List<Map<String, dynamic>> credentials;
+  final bool loading;
+  final AppLocalizations loc;
+  final ColorScheme colorScheme;
+  final VoidCallback onRefresh;
+  final Future<void> Function(String key, String title, AppLocalizations loc,
+      {String? hint}) onEditField;
+  final ValueChanged<Map<String, dynamic>> onDeleteCredential;
+
+  const _WebAuthnCard({
+    required this.config,
+    required this.credentials,
+    required this.loading,
+    required this.loc,
+    required this.colorScheme,
+    required this.onRefresh,
+    required this.onEditField,
+    required this.onDeleteCredential,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return _SettingsActionCard(
+      icon: CupertinoIcons.lock_shield,
+      title: loc.t('webauthn'),
+      margin: const EdgeInsets.fromLTRB(
+        AppTheme.spacingLg,
+        AppTheme.spacingLg,
+        AppTheme.spacingLg,
+        0,
+      ),
+      children: [
+        if (loading)
+          const Padding(
+            padding: EdgeInsets.all(AppTheme.spacingMd),
+            child: Center(child: CupertinoActivityIndicator()),
+          )
+        else ...[
+          _ValueActionRow(
+            title: loc.t('webauthn_rp_id'),
+            value: (config['rp_id'] ?? '').toString().isEmpty
+                ? loc.t('empty')
+                : (config['rp_id'] ?? '').toString(),
+            onTap: () => onEditField(
+              'rp_id',
+              loc.t('webauthn_rp_id'),
+              loc,
+              hint: 'example.com',
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          _ValueActionRow(
+            title: loc.t('webauthn_rp_name'),
+            value: (config['rp_name'] ?? '').toString().isEmpty
+                ? loc.t('empty')
+                : (config['rp_name'] ?? '').toString(),
+            onTap: () => onEditField(
+              'rp_name',
+              loc.t('webauthn_rp_name'),
+              loc,
+              hint: 'Octopus Manager',
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          _ValueActionRow(
+            title: loc.t('webauthn_origins'),
+            value: (config['allowed_origins'] ?? '').toString().isEmpty
+                ? loc.t('empty')
+                : (config['allowed_origins'] ?? '').toString(),
+            subtitle: loc.t('webauthn_origins_hint'),
+            onTap: () => onEditField(
+              'allowed_origins',
+              loc.t('webauthn_origins'),
+              loc,
+              hint: 'https://example.com,https://app.example.com',
+            ),
+          ),
+          // Credentials list
+          const SizedBox(height: AppTheme.spacingMd),
+          Text(
+            loc.t('webauthn_credentials'),
+            style: theme.textTheme.caption?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: AppTheme.spacingSm),
+          if (credentials.isEmpty)
+            Text(
+              loc.t('webauthn_no_credentials'),
+              style: TextStyle(
+                fontSize: 13,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            )
+          else
+            ...credentials.map((cred) {
+              final id = cred['id']?.toString() ?? '';
+              final name = cred['name']?.toString() ??
+                  cred['credential_name']?.toString() ??
+                  id;
+              final createdAt = cred['created_at']?.toString() ?? '';
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppTheme.spacingSm),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.vpn_key,
+                      size: 16,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: AppTheme.spacingSm),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            name,
+                            style: const TextStyle(fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (createdAt.isNotEmpty)
+                            Text(
+                              createdAt,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    CupertinoButton(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      onPressed: () => onDeleteCredential(cred),
+                      child: Text(
+                        loc.t('webauthn_delete'),
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+        ],
       ],
     );
   }
