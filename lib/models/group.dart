@@ -11,6 +11,11 @@ class Group {
   final String createdTime;
   final List<GroupItem> items;
 
+  // Phase 2.3: New fields
+  final String endpointProvider;
+  final String outboundFormat;
+  final String condition;
+
   Group({
     required this.id,
     required this.name,
@@ -21,6 +26,9 @@ class Group {
     this.sessionKeepTime = 0,
     this.createdTime = '',
     this.items = const [],
+    this.endpointProvider = '',
+    this.outboundFormat = '',
+    this.condition = '',
   });
 
   factory Group.fromJson(Map<String, dynamic> json) {
@@ -36,6 +44,10 @@ class Group {
       sessionKeepTime: parseInt(json['session_keep_time']),
       createdTime: parseString(json['created_time']),
       items: parseJsonMapList(json['items']).map(GroupItem.fromJson).toList(),
+      // Phase 2.3: New fields
+      endpointProvider: parseString(json['endpoint_provider']),
+      outboundFormat: parseString(json['outbound_format']),
+      condition: parseString(json['condition']),
     );
   }
 
@@ -50,6 +62,10 @@ class Group {
       'session_keep_time': sessionKeepTime,
       if (createdTime.isNotEmpty) 'created_time': createdTime,
       'items': items.map((e) => e.toJson()).toList(),
+      // Phase 2.3: New fields
+      if (endpointProvider.isNotEmpty) 'endpoint_provider': endpointProvider,
+      if (outboundFormat.isNotEmpty) 'outbound_format': outboundFormat,
+      if (condition.isNotEmpty) 'condition': condition,
     };
   }
 }
@@ -104,6 +120,11 @@ class GroupUpdateRequest {
   final List<GroupItemUpdateRequest> itemsToUpdate;
   final List<int> itemsToDelete;
 
+  // Phase 2.3: New fields
+  final String? endpointProvider;
+  final String? outboundFormat;
+  final String? condition;
+
   const GroupUpdateRequest({
     required this.id,
     this.name,
@@ -115,6 +136,9 @@ class GroupUpdateRequest {
     this.itemsToAdd = const [],
     this.itemsToUpdate = const [],
     this.itemsToDelete = const [],
+    this.endpointProvider,
+    this.outboundFormat,
+    this.condition,
   });
 
   bool get hasChanges =>
@@ -124,6 +148,9 @@ class GroupUpdateRequest {
       matchRegex != null ||
       firstTokenTimeOut != null ||
       sessionKeepTime != null ||
+      endpointProvider != null ||
+      outboundFormat != null ||
+      condition != null ||
       itemsToAdd.isNotEmpty ||
       itemsToUpdate.isNotEmpty ||
       itemsToDelete.isNotEmpty;
@@ -142,6 +169,10 @@ class GroupUpdateRequest {
     if (itemsToUpdate.isNotEmpty)
       'items_to_update': itemsToUpdate.map((item) => item.toJson()).toList(),
     if (itemsToDelete.isNotEmpty) 'items_to_delete': itemsToDelete,
+    // Phase 2.3: New fields
+    if (endpointProvider != null) 'endpoint_provider': endpointProvider,
+    if (outboundFormat != null) 'outbound_format': outboundFormat,
+    if (condition != null) 'condition': condition,
   };
 
   factory GroupUpdateRequest.fromDiff(Group previous, Group next) {
@@ -252,6 +283,16 @@ class GroupUpdateRequest {
       itemsToAdd: itemsToAdd,
       itemsToUpdate: itemsToUpdate,
       itemsToDelete: itemsToDelete.toList()..sort(),
+      // Phase 2.3: New fields
+      endpointProvider: next.endpointProvider != previous.endpointProvider
+          ? next.endpointProvider
+          : null,
+      outboundFormat: next.outboundFormat != previous.outboundFormat
+          ? next.outboundFormat
+          : null,
+      condition: next.condition != previous.condition
+          ? next.condition
+          : null,
     );
   }
 }
