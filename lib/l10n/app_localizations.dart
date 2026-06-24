@@ -1136,6 +1136,63 @@ class AppLocalizations {
     'site_weekly_average': {AppLocale.en: 'Weekly Average', AppLocale.zh: '周均消耗'},
     'site_recommendation': {AppLocale.en: 'Recommendation', AppLocale.zh: '建议'},
 
+    // Site Channel Projection
+    'site_channel': {AppLocale.en: 'Channel', AppLocale.zh: '渠道'},
+    'site_channels': {AppLocale.en: 'Channels', AppLocale.zh: '渠道列表'},
+    'site_channel_projection': {
+      AppLocale.en: 'Channel Projection',
+      AppLocale.zh: '渠道投影',
+    },
+    'site_channel_group': {AppLocale.en: 'Group', AppLocale.zh: '分组'},
+    'site_channel_model': {AppLocale.en: 'Model', AppLocale.zh: '模型'},
+    'site_channel_route': {AppLocale.en: 'Route', AppLocale.zh: '路由'},
+    'site_channel_manual_model': {
+      AppLocale.en: 'Manual Model',
+      AppLocale.zh: '手动模型',
+    },
+    'site_channel_add_model': {
+      AppLocale.en: 'Add Model',
+      AppLocale.zh: '添加模型',
+    },
+    'site_channel_delete_model': {
+      AppLocale.en: 'Delete Model',
+      AppLocale.zh: '删除模型',
+    },
+    'site_channel_import': {AppLocale.en: 'Import', AppLocale.zh: '导入'},
+    'site_channel_all_api_hub': {
+      AppLocale.en: 'All API Hub',
+      AppLocale.zh: '全部 API Hub',
+    },
+    'site_channel_met_api': {
+      AppLocale.en: 'Met API',
+      AppLocale.zh: '已满足 API',
+    },
+    'site_channel_no_channels': {
+      AppLocale.en: 'No channels found',
+      AppLocale.zh: '未找到渠道',
+    },
+    'site_channel_no_models': {
+      AppLocale.en: 'No models configured',
+      AppLocale.zh: '未配置模型',
+    },
+    'site_channel_model_name_hint': {
+      AppLocale.en: 'Enter model name',
+      AppLocale.zh: '输入模型名称',
+    },
+    'site_channel_delete_model_confirm': {
+      AppLocale.en: 'Delete model "{name}"?',
+      AppLocale.zh: '删除模型 "{name}"？',
+    },
+    'site_channel_route_type': {
+      AppLocale.en: 'Route Type',
+      AppLocale.zh: '路由类型',
+    },
+    'site_channel_account': {AppLocale.en: 'Account', AppLocale.zh: '账户'},
+    'site_channel_import_placeholder': {
+      AppLocale.en: 'Import functionality coming soon',
+      AppLocale.zh: '导入功能即将推出',
+    },
+
     // Errors
     'error': {AppLocale.en: 'Error', AppLocale.zh: '错误'},
     'operation_failed': {

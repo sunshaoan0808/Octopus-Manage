@@ -17,6 +17,7 @@ import 'package:octopusmanage/models/api_credential.dart';
 import 'package:octopusmanage/models/model_mapping.dart';
 import 'package:octopusmanage/models/proxy.dart';
 import 'package:octopusmanage/models/site.dart';
+import 'package:octopusmanage/models/site_channel.dart';
 import 'package:octopusmanage/models/stats.dart';
 import 'package:octopusmanage/models/user.dart';
 import 'package:octopusmanage/utils/parse_utils.dart';
@@ -907,6 +908,76 @@ class OctopusApi {
       query: {'tool': tool},
     );
     return res['data']?.toString() ?? '';
+  }
+
+  // ====== Site Channel Projection ======
+  Future<List<SiteChannelCard>> getSiteChannels(int siteId) async {
+    final res = await _api.get('/api/v1/site/$siteId/channels');
+    return parseJsonMapList(res['data'])
+        .map(SiteChannelCard.fromJson)
+        .toList();
+  }
+
+  Future<SiteChannelCard> getSiteChannel(
+      int siteId, int channelId) async {
+    final res =
+        await _api.get('/api/v1/site/$siteId/channels/$channelId');
+    return SiteChannelCard.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<List<APIKey>> getSiteChannelKeys(
+      int siteId, int channelId) async {
+    final res = await _api
+        .get('/api/v1/site/$siteId/channels/$channelId/keys');
+    return parseJsonMapList(res['data']).map(APIKey.fromJson).toList();
+  }
+
+  Future<List<APIKey>> getSiteChannelSourceKeys(int siteId) async {
+    final res =
+        await _api.get('/api/v1/site/$siteId/channels/source-keys');
+    return parseJsonMapList(res['data']).map(APIKey.fromJson).toList();
+  }
+
+  Future<List<SiteChannelGroup>> getSiteChannelGroupProjection(
+      int siteId) async {
+    final res =
+        await _api.get('/api/v1/site/$siteId/channels/group-projection');
+    return parseJsonMapList(res['data'])
+        .map(SiteChannelGroup.fromJson)
+        .toList();
+  }
+
+  Future<List<SiteChannelModel>> getSiteChannelModelRoutes(
+      int siteId, int channelId) async {
+    final res = await _api
+        .get('/api/v1/site/$siteId/channels/$channelId/model-routes');
+    return parseJsonMapList(res['data'])
+        .map(SiteChannelModel.fromJson)
+        .toList();
+  }
+
+  Future<List<SiteChannelModel>> getSiteChannelManualModels(
+      int siteId, int channelId) async {
+    final res = await _api
+        .get('/api/v1/site/$siteId/channels/$channelId/manual-models');
+    return parseJsonMapList(res['data'])
+        .map(SiteChannelModel.fromJson)
+        .toList();
+  }
+
+  Future<void> addSiteChannelManualModel(
+      int siteId, int channelId, String modelName) async {
+    await _api.post(
+      '/api/v1/site/$siteId/channels/$channelId/manual-models',
+      body: {'model_name': modelName},
+    );
+  }
+
+  Future<void> deleteSiteChannelManualModel(
+      int siteId, int channelId, String modelName) async {
+    await _api.delete(
+      '/api/v1/site/$siteId/channels/$channelId/manual-models/$modelName',
+    );
   }
 
   // ====== Update ======
