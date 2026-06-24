@@ -50,3 +50,17 @@ app.*.map.json
 
 # Claude Code
 CLAUDE.md
+
+# AI tooling local configs
+.claude/
+.omo/
+.workbuddy/
+
+# Build artifacts and logs
+build_log.txt
+build_output.txt
+*.log
+nul
+
+# Android build reports (auto-generated)
+android/build/reports/
