@@ -1,14 +1,21 @@
 import 'dart:convert';
 import 'package:octopusmanage/models/ai_route.dart';
+import 'package:octopusmanage/models/alert.dart';
+import 'package:octopusmanage/models/analytics.dart';
 import 'package:octopusmanage/models/api_key.dart';
+import 'package:octopusmanage/models/audit_log.dart';
+import 'package:octopusmanage/models/model_market.dart';
 import 'package:octopusmanage/models/channel.dart';
 import 'package:octopusmanage/models/channel_probe.dart';
 import 'package:octopusmanage/models/group.dart';
 import 'package:octopusmanage/models/group_probe.dart';
 import 'package:octopusmanage/models/llm.dart';
+import 'package:octopusmanage/models/ops.dart';
 import 'package:octopusmanage/models/relay_log.dart';
 import 'package:octopusmanage/models/setting.dart';
 import 'package:octopusmanage/models/stats.dart';
+import 'package:octopusmanage/models/user.dart';
+import 'package:octopusmanage/utils/parse_utils.dart';
 import 'api_service.dart';
 
 class OctopusApi {
@@ -25,7 +32,7 @@ class OctopusApi {
       '/api/v1/user/login',
       body: {'username': username, 'password': password, 'expire': expire},
     );
-    return res['data'] as Map<String, dynamic>? ?? {};
+    return parseJsonMap(res['data']) ?? {};
   }
 
   Future<void> changeUsername(String newUsername) async {
@@ -44,7 +51,7 @@ class OctopusApi {
 
   Future<Map<String, dynamic>> checkBootstrap() async {
     final res = await _api.get('/api/v1/bootstrap/status');
-    return res['data'] as Map<String, dynamic>? ?? {};
+    return parseJsonMap(res['data']) ?? {};
   }
 
   Future<bool> createAdmin(String username, String password) async {
@@ -52,52 +59,79 @@ class OctopusApi {
       '/api/v1/bootstrap/create-admin',
       body: {'username': username, 'password': password},
     );
-    final data = res['data'] as Map<String, dynamic>? ?? {};
-    return data['initialized'] == true;
+    final data = parseJsonMap(res['data']) ?? {};
+    return parseBool(data['initialized']);
+  }
+
+  // ====== User ======
+  Future<List<User>> getUsers() async {
+    final res = await _api.get('/api/v1/user/list');
+    return parseJsonMapList(res['data']).map(User.fromJson).toList();
+  }
+
+  Future<void> createUser(String username, String password, String role) async {
+    await _api.post(
+      '/api/v1/user/create',
+      body: {'username': username, 'password': password, 'role': role},
+    );
+  }
+
+  Future<void> updateUserRole(int id, String role) async {
+    await _api.post(
+      '/api/v1/user/update-role',
+      body: {'id': id, 'role': role},
+    );
+  }
+
+  Future<void> deleteUser(int id) async {
+    await _api.delete('/api/v1/user/delete/$id');
+  }
+
+  Future<bool> checkUserStatus() async {
+    final res = await _api.get('/api/v1/user/status');
+    return res['data'] == 'ok';
   }
 
   // ====== Stats ======
   Future<StatsMetrics> getStatsToday() async {
     final res = await _api.get('/api/v1/stats/today');
-    return StatsMetrics.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return StatsMetrics.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<StatsMetrics> getStatsTotal() async {
     final res = await _api.get('/api/v1/stats/total');
-    return StatsMetrics.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return StatsMetrics.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<List<StatsDaily>> getStatsDaily() async {
     final res = await _api.get('/api/v1/stats/daily');
-    final list = res['data'] as List? ?? [];
-    return list
-        .map((e) => StatsDaily.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseJsonMapList(res['data']).map(StatsDaily.fromJson).toList();
   }
 
   Future<List<StatsHourly>> getStatsHourly() async {
     final res = await _api.get('/api/v1/stats/hourly');
-    final list = res['data'] as List? ?? [];
-    return list
-        .map((e) => StatsHourly.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseJsonMapList(res['data']).map(StatsHourly.fromJson).toList();
   }
 
   Future<List<StatsAPIKeyEntry>> getStatsApiKey() async {
     final res = await _api.get('/api/v1/stats/apikey');
-    final list = res['data'] as List? ?? [];
-    return list
-        .map((e) => StatsAPIKeyEntry.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseJsonMapList(
+      res['data'],
+    ).map(StatsAPIKeyEntry.fromJson).toList();
+  }
+
+  // ====== Stats ======
+  // (existing stats methods above)
+
+  Future<List<StatsChannel>> getStatsChannel() async {
+    final res = await _api.get('/api/v1/stats/channel');
+    return parseJsonMapList(res['data']).map(StatsChannel.fromJson).toList();
   }
 
   // ====== Channel ======
   Future<List<Channel>> getChannels() async {
     final res = await _api.get('/api/v1/channel/list');
-    final list = res['data'] as List? ?? [];
-    return list
-        .map((e) => Channel.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseJsonMapList(res['data']).map(Channel.fromJson).toList();
   }
 
   Future<Channel> createChannel(Channel channel) async {
@@ -105,7 +139,7 @@ class OctopusApi {
       '/api/v1/channel/create',
       body: channel.toJson(),
     );
-    return Channel.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return Channel.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<Channel> updateChannel(Channel channel) async {
@@ -113,7 +147,7 @@ class OctopusApi {
       '/api/v1/channel/update',
       body: channel.toJson(),
     );
-    return Channel.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return Channel.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<void> enableChannel(int id, bool enabled) async {
@@ -132,7 +166,7 @@ class OctopusApi {
       '/api/v1/channel/fetch-model',
       body: channel.toJson(),
     );
-    return (res['data'] as List? ?? []).map((e) => e.toString()).toList();
+    return parseStringList(res['data']);
   }
 
   Future<void> syncChannels() async {
@@ -141,9 +175,7 @@ class OctopusApi {
 
   Future<ChannelTestSummary> testChannel(Channel channel) async {
     final res = await _api.post('/api/v1/channel/test', body: channel.toJson());
-    return ChannelTestSummary.fromJson(
-      res['data'] as Map<String, dynamic>? ?? {},
-    );
+    return ChannelTestSummary.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<String> getLastSyncTime() async {
@@ -154,13 +186,12 @@ class OctopusApi {
   // ====== Group ======
   Future<List<Group>> getGroups() async {
     final res = await _api.get('/api/v1/group/list');
-    final list = res['data'] as List? ?? [];
-    return list.map((e) => Group.fromJson(e as Map<String, dynamic>)).toList();
+    return parseJsonMapList(res['data']).map(Group.fromJson).toList();
   }
 
   Future<Group> createGroup(Group group) async {
     final res = await _api.post('/api/v1/group/create', body: group.toJson());
-    return Group.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return Group.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<Group> updateGroup(Object payload) async {
@@ -171,7 +202,7 @@ class OctopusApi {
       _ => throw ArgumentError('Unsupported group update payload: $payload'),
     };
     final res = await _api.post('/api/v1/group/update', body: body);
-    return Group.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return Group.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<void> deleteGroup(int id) async {
@@ -184,7 +215,7 @@ class OctopusApi {
 
   Future<AutoGroupResult> autoGroupModels() async {
     final res = await _api.post('/api/v1/group/auto-group');
-    return AutoGroupResult.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return AutoGroupResult.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<GroupModelTestProgress> startGroupTest(int groupId) async {
@@ -192,16 +223,12 @@ class OctopusApi {
       '/api/v1/group/test',
       body: {'group_id': groupId},
     );
-    return GroupModelTestProgress.fromJson(
-      res['data'] as Map<String, dynamic>? ?? {},
-    );
+    return GroupModelTestProgress.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<GroupModelTestProgress> getGroupTestProgress(String id) async {
     final res = await _api.get('/api/v1/group/test/progress/$id');
-    return GroupModelTestProgress.fromJson(
-      res['data'] as Map<String, dynamic>? ?? {},
-    );
+    return GroupModelTestProgress.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<AIRouteProgress> generateAIRoute({
@@ -215,29 +242,38 @@ class OctopusApi {
         if (scope == AIRouteScope.group && groupId != null) 'group_id': groupId,
       },
     );
-    return AIRouteProgress.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return AIRouteProgress.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<AIRouteProgress> getAIRouteProgress(String id) async {
     final res = await _api.get('/api/v1/route/ai-generate/progress/$id');
-    return AIRouteProgress.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return AIRouteProgress.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<AIRouteProgress> getAIRouteStatus(String id) async {
+    final res = await _api.get('/api/v1/route/ai-generate/status/$id');
+    return AIRouteProgress.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<AIRouteProgress> getAIRouteResult(String id) async {
+    final res = await _api.get('/api/v1/route/ai-generate/result/$id');
+    return AIRouteProgress.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   // ====== API Key ======
   Future<List<APIKey>> getApiKeys() async {
     final res = await _api.get('/api/v1/apikey/list');
-    final list = res['data'] as List? ?? [];
-    return list.map((e) => APIKey.fromJson(e as Map<String, dynamic>)).toList();
+    return parseJsonMapList(res['data']).map(APIKey.fromJson).toList();
   }
 
   Future<APIKey> createApiKey(APIKey apiKey) async {
     final res = await _api.post('/api/v1/apikey/create', body: apiKey.toJson());
-    return APIKey.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return APIKey.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<APIKey> updateApiKey(APIKey apiKey) async {
     final res = await _api.post('/api/v1/apikey/update', body: apiKey.toJson());
-    return APIKey.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return APIKey.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<void> deleteApiKey(int id) async {
@@ -247,20 +283,17 @@ class OctopusApi {
   // ====== Model / Price ======
   Future<List<LLMInfo>> getModels() async {
     final res = await _api.get('/api/v1/model/list');
-    final list = res['data'] as List? ?? [];
-    return list
-        .map((e) => LLMInfo.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseJsonMapList(res['data']).map(LLMInfo.fromJson).toList();
   }
 
   Future<LLMInfo> createModel(LLMInfo model) async {
     final res = await _api.post('/api/v1/model/create', body: model.toJson());
-    return LLMInfo.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return LLMInfo.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<LLMInfo> updateModel(LLMInfo model) async {
     final res = await _api.post('/api/v1/model/update', body: model.toJson());
-    return LLMInfo.fromJson(res['data'] as Map<String, dynamic>? ?? {});
+    return LLMInfo.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<void> deleteModel(String name) async {
@@ -272,12 +305,15 @@ class OctopusApi {
     // 后端可能返回 Map（以 key 为名称的对象）或 List，两种格式都支持
     final data = res['data'];
     if (data is List) {
-      return data
-          .map((e) => LLMChannel.fromJson(e as Map<String, dynamic>))
-          .toList();
-    } else if (data is Map<String, dynamic>) {
-      return data.values
-          .map((e) => LLMChannel.fromJson(e as Map<String, dynamic>))
+      return parseJsonMapList(data).map(LLMChannel.fromJson).toList();
+    } else if (data is Map) {
+      return data.entries
+          .map((entry) {
+            final item = parseJsonMap(entry.value);
+            if (item == null) return null;
+            return LLMChannel.fromJson({'name': entry.key.toString(), ...item});
+          })
+          .whereType<LLMChannel>()
           .toList();
     }
     return [];
@@ -292,16 +328,23 @@ class OctopusApi {
     return res['data']?.toString() ?? '';
   }
 
+  Future<ModelMarketResponse> getModelMarket() async {
+    final res = await _api.get('/api/v1/model/market');
+    return ModelMarketResponse.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
   // ====== Log ======
   Future<List<RelayLog>> getLogs({int page = 1, int pageSize = 20}) async {
-    final query = Uri(
-      queryParameters: {'page': '$page', 'page_size': '$pageSize'},
-    ).query;
-    final res = await _api.get('/api/v1/log/list?$query');
-    final list = res['data'] as List? ?? [];
-    return list
-        .map((e) => RelayLog.fromJson(e as Map<String, dynamic>))
-        .toList();
+    final res = await _api.get(
+      '/api/v1/log/list',
+      query: {'page': '$page', 'page_size': '$pageSize'},
+    );
+    return parseJsonMapList(res['data']).map(RelayLog.fromJson).toList();
+  }
+
+  Future<RelayLog> getLogDetail(int id) async {
+    final res = await _api.get('/api/v1/log/detail', query: {'id': '$id'});
+    return RelayLog.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   Future<void> clearLogs() async {
@@ -311,10 +354,7 @@ class OctopusApi {
   // ====== Setting ======
   Future<List<Setting>> getSettings() async {
     final res = await _api.get('/api/v1/setting/list');
-    final list = res['data'] as List? ?? [];
-    return list
-        .map((e) => Setting.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return parseJsonMapList(res['data']).map(Setting.fromJson).toList();
   }
 
   Future<void> setSetting(String key, String value) async {
@@ -343,13 +383,168 @@ class OctopusApi {
       contentType: 'application/json',
     );
     if (res is String) {
-      final decoded = jsonDecode(res) as Map<String, dynamic>;
-      return decoded['data'] as Map<String, dynamic>? ?? decoded;
+      final decoded = parseJsonMap(jsonDecode(res)) ?? {};
+      return parseJsonMap(decoded['data']) ?? decoded;
     }
     if (res is Map<String, dynamic>) {
-      return res['data'] as Map<String, dynamic>? ?? res;
+      return parseJsonMap(res['data']) ?? res;
     }
     return {};
+  }
+
+  // ====== Alert ======
+  Future<List<AlertRule>> getAlertRules() async {
+    final res = await _api.get('/api/v1/alert/rule/list');
+    return parseJsonMapList(res['data']).map(AlertRule.fromJson).toList();
+  }
+
+  Future<AlertRule> createAlertRule(AlertRule rule) async {
+    final res = await _api.post(
+      '/api/v1/alert/rule/create',
+      body: rule.toJson(),
+    );
+    return AlertRule.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<void> updateAlertRule(AlertRule rule) async {
+    await _api.post('/api/v1/alert/rule/update', body: rule.toJson());
+  }
+
+  Future<void> deleteAlertRule(int id) async {
+    await _api.delete('/api/v1/alert/rule/delete/$id');
+  }
+
+  Future<List<AlertNotifChannel>> getNotifChannels() async {
+    final res = await _api.get('/api/v1/alert/notif/list');
+    return parseJsonMapList(res['data'])
+        .map(AlertNotifChannel.fromJson)
+        .toList();
+  }
+
+  Future<AlertNotifChannel> createNotifChannel(AlertNotifChannel ch) async {
+    final res = await _api.post('/api/v1/alert/notif/create', body: ch.toJson());
+    return AlertNotifChannel.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<void> updateNotifChannel(AlertNotifChannel ch) async {
+    await _api.post('/api/v1/alert/notif/update', body: ch.toJson());
+  }
+
+  Future<void> deleteNotifChannel(int id) async {
+    await _api.delete('/api/v1/alert/notif/delete/$id');
+  }
+
+  Future<List<AlertHistory>> getAlertHistory({int limit = 100}) async {
+    final res = await _api.get(
+      '/api/v1/alert/history',
+      query: {'limit': '$limit'},
+    );
+    return parseJsonMapList(res['data']).map(AlertHistory.fromJson).toList();
+  }
+
+  // ====== Ops ======
+  Future<OpsCacheStatus> getOpsCache() async {
+    final res = await _api.get('/api/v1/ops/cache');
+    return OpsCacheStatus.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<OpsQuotaSummary> getOpsQuota() async {
+    final res = await _api.get('/api/v1/ops/quota');
+    return OpsQuotaSummary.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<OpsHealthStatus> getOpsHealth() async {
+    final res = await _api.get('/api/v1/ops/health');
+    return OpsHealthStatus.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<OpsSystemSummary> getOpsSystem() async {
+    final res = await _api.get('/api/v1/ops/system');
+    return OpsSystemSummary.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  // ====== Analytics ======
+  Future<AnalyticsOverview> getAnalyticsOverview({String range = '7d'}) async {
+    final res = await _api.get(
+      '/api/v1/analytics/overview',
+      query: {'range': range},
+    );
+    return AnalyticsOverview.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<List<AnalyticsBreakdownItem>> getAnalyticsProviderBreakdown({
+    String range = '7d',
+  }) async {
+    final res = await _api.get(
+      '/api/v1/analytics/provider-breakdown',
+      query: {'range': range},
+    );
+    return parseJsonMapList(res['data'])
+        .map(AnalyticsBreakdownItem.fromProviderJson)
+        .toList();
+  }
+
+  Future<List<AnalyticsBreakdownItem>> getAnalyticsModelBreakdown({
+    String range = '7d',
+  }) async {
+    final res = await _api.get(
+      '/api/v1/analytics/model-breakdown',
+      query: {'range': range},
+    );
+    return parseJsonMapList(res['data'])
+        .map(AnalyticsBreakdownItem.fromModelJson)
+        .toList();
+  }
+
+  Future<List<AnalyticsBreakdownItem>> getAnalyticsApiKeyBreakdown({
+    String range = '7d',
+  }) async {
+    final res = await _api.get(
+      '/api/v1/analytics/apikey-breakdown',
+      query: {'range': range},
+    );
+    return parseJsonMapList(res['data'])
+        .map(AnalyticsBreakdownItem.fromApiKeyJson)
+        .toList();
+  }
+
+  Future<List<AnalyticsGroupHealthItem>> getAnalyticsGroupHealth() async {
+    final res = await _api.get('/api/v1/analytics/group-health');
+    return parseJsonMapList(res['data'])
+        .map(AnalyticsGroupHealthItem.fromJson)
+        .toList();
+  }
+
+  Future<AnalyticsUtilization> getAnalyticsUtilization({
+    String range = '7d',
+  }) async {
+    final res = await _api.get(
+      '/api/v1/analytics/utilization',
+      query: {'range': range},
+    );
+    return AnalyticsUtilization.fromJson(parseJsonMap(res['data']) ?? {});
+  }
+
+  Future<AnalyticsEvaluationSummary> getAnalyticsEvaluation() async {
+    final res = await _api.get('/api/v1/analytics/evaluation');
+    final data = parseJsonMap(res['data']) ?? {};
+    return AnalyticsEvaluationSummary.fromJson(
+      parseJsonMap(data['semantic_cache']) ?? {},
+    );
+  }
+
+  // ====== Audit ======
+  Future<List<AuditLog>> getAuditLogs({int page = 1, int pageSize = 50}) async {
+    final res = await _api.get(
+      '/api/v1/audit/list',
+      query: {'page': '$page', 'page_size': '$pageSize'},
+    );
+    return parseJsonMapList(res['data']).map(AuditLog.fromJson).toList();
+  }
+
+  Future<AuditLog> getAuditLogDetail(int id) async {
+    final res = await _api.get('/api/v1/audit/detail', query: {'id': '$id'});
+    return AuditLog.fromJson(parseJsonMap(res['data']) ?? {});
   }
 
   // ====== Update ======
@@ -360,7 +555,7 @@ class OctopusApi {
 
   Future<Map<String, dynamic>> checkUpdate() async {
     final res = await _api.get('/api/v1/update');
-    return res['data'] as Map<String, dynamic>? ?? {};
+    return parseJsonMap(res['data']) ?? {};
   }
 
   Future<void> updateCore() async {
