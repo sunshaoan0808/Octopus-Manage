@@ -472,7 +472,7 @@ class ChannelUpdateRequest {
   final bool? skipModelTest;
   final RequestRewriteConfig? requestRewrite;
   final bool? managed;
-  final String? managedSource;
+  final ManagedChannelSource? managedSource;
 
   const ChannelUpdateRequest({
     required this.id,
@@ -559,7 +559,7 @@ class ChannelUpdateRequest {
       if (skipModelTest != null) 'skip_model_test': skipModelTest,
       if (requestRewrite != null) 'request_rewrite': requestRewrite!.toJson(),
       if (managed != null) 'managed': managed,
-      if (managedSource != null) 'managed_source': managedSource,
+      if (managedSource != null) 'managed_source': managedSource!.toJson(),
     };
   }
 

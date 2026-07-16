@@ -948,12 +948,16 @@ class _GroupEditorSheetState extends State<_GroupEditorSheet> {
     return Group(
       id: widget.existing?.id ?? 0,
       name: _nameCtl.text.trim(),
+      category: widget.existing?.category ?? '',
       endpointType: _endpointType,
+      endpointProvider: widget.existing?.endpointProvider ?? '',
+      outboundFormat: widget.existing?.outboundFormat ?? '',
       mode: _mode,
       matchRegex: _matchRegexCtl.text.trim(),
       firstTokenTimeOut: int.tryParse(_timeoutCtl.text.trim()) ?? 0,
+      attemptTimeOut: widget.existing?.attemptTimeOut ?? 0,
       sessionKeepTime: int.tryParse(_keepTimeCtl.text.trim()) ?? 0,
-      createdTime: widget.existing?.createdTime ?? '',
+      condition: widget.existing?.condition ?? '',
       items: [
         for (var index = 0; index < _selectedMembers.length; index++)
           _selectedMembers[index].toGroupItem(priority: index + 1),
