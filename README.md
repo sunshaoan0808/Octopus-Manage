@@ -1,94 +1,93 @@
-
 # Octopus Manager
 
-English|[简体中文](README_zh.md)
+简体中文|[English](README_en.md)
 
-A Flutter-based management client for [Octopus](https://github.com/lingyuins/octopus) — an LLM API gateway and proxy manager.
+基于 Flutter 的 [Octopus](https://github.com/lingyuins/octopus) 管理客户端 —— LLM API 网关与代理管理器。
 
-## Features
+## 功能特性
 
-- **Dashboard** — Real-time today/total metrics, combined daily requests and cost chart, channel/API key rankings, and optional 15/30/60 second auto-refresh
-- **Channel Management** — Add, edit, enable/disable, sync upstream channels, fetch available models, and test channel connectivity before saving
-- **Group Management** — Configure routing groups with round-robin, random, failover, weighted, and auto modes; auto-group discovered models; test group health; and generate AI routes
-- **Model Management** — Create, edit, and delete model pricing entries, inspect linked channels, and trigger upstream price sync
-- **API Key Management** — Create, edit, enable/disable, and delete API keys with cost limits and expiration support
-- **Relay Logs** — Paginated log browsing with pull-to-refresh and clear-all actions
-- **Settings & Operations** — Change account credentials, export/import settings, tune retry/circuit-breaker/auto-strategy options, sync channels, update model prices, and trigger core updates
-- **Bootstrap** — Initial admin account setup when connecting to a fresh Octopus server
-- **i18n** — English and Chinese interface
+- **仪表盘** — 查看今日/累计实时指标、请求与费用合并趋势图、渠道与 API Key 排行榜，并支持 15/30/60 秒自动刷新
+- **渠道管理** — 添加、编辑、启用/禁用渠道，同步上游配置，拉取可用模型，并在保存前测试渠道连通性
+- **分组管理** — 配置轮询、随机、故障转移、加权和自动模式分组；支持自动分组、分组健康测试，以及 AI 路由生成
+- **模型管理** — 维护模型价格，查看已关联渠道，并手动同步上游模型价格信息
+- **API Key 管理** — 创建、编辑、启用/禁用和删除 API Key，支持费用限制和过期时间
+- **转发日志** — 分页浏览日志，支持下拉刷新和一键清空
+- **设置与运维** — 修改账户信息、导入导出设置、调整重试/熔断/自动策略参数、同步渠道、更新模型价格以及触发核心更新
+- **初始化引导** — 连接新的 Octopus 服务器时，引导创建初始管理员账户
+- **国际化** — 支持中文和英文界面
 
-## Prerequisites
+## 环境要求
 
 - Flutter 3.x SDK
 - Dart SDK `^3.10.4`
-- A running [Octopus](https://github.com/lingyuins/octopus) server
+- 运行中的 [Octopus](https://github.com/lingyuins/octopus) 服务端
 
-## Getting Started
+## 快速开始
 
 ```bash
-# Clone the repository
+# 克隆仓库
 git clone https://github.com/lingyuins/Octopus-Manage.git
 cd Octopus-Manage
 
-# Install dependencies
+# 安装依赖
 flutter pub get
 
-# Optional checks
+# 可选检查
 flutter analyze
 flutter test
 
-# Run the app
+# 运行应用
 flutter run
 ```
 
-## Usage
+## 使用说明
 
-1. Enter your Octopus server URL (e.g. `http://192.168.1.1:8080`)
-2. If the server has no admin account yet, you'll be guided through the initial setup
-3. Log in with your admin credentials
-4. Enable "Remember me" for a long-lived session, or leave it unchecked for a short-lived login
-5. Manage dashboards, channels, groups, models, API keys, logs, and server settings from the tab bar
+1. 输入 Octopus 服务器地址（例如 `http://192.168.1.1:8080`）
+2. 如果服务器尚未创建管理员账户，将自动进入初始设置页面
+3. 使用管理员凭据登录
+4. 勾选"记住我"可使用长期会话，不勾选则使用短期登录
+5. 登录后可通过底部标签页管理仪表盘、渠道、分组、模型、API Key、日志和系统设置
 
-## Architecture
+## 项目结构
 
-Core runtime notes:
+核心运行说明：
 
-- `AppProvider` is the single `ChangeNotifier`, handling auth state, locale, bootstrap status, wait-time formatting, dashboard auto-refresh preferences, and global error state.
-- `ApiService` provides raw HTTP primitives with Bearer auth, a 15 second timeout, persisted base URL/token, and automatic logout on `401`.
-- `OctopusApi` is the typed API layer for auth, stats, channels, groups, models, API keys, logs, settings, and update endpoints.
-- `main.dart` boots into a loading shell, then shows `HomePage` when a token exists or `LoginPage` otherwise; bootstrap is checked from the login flow and routes to `BootstrapPage` when needed.
+- `AppProvider` 是唯一的 `ChangeNotifier`，负责认证状态、语言、初始化状态、等待时间单位、仪表盘自动刷新偏好和全局错误状态。
+- `ApiService` 提供原始 HTTP 能力，包含 Bearer Token、15 秒超时、基础地址与令牌持久化，以及 `401` 自动登出。
+- `OctopusApi` 是类型化 API 封装，覆盖认证、统计、渠道、分组、模型、API Key、日志、设置和更新接口。
+- `main.dart` 先进入加载壳层；存在令牌时进入 `HomePage`，否则进入 `LoginPage`；是否需要初始化由登录流程检查并在需要时跳转到 `BootstrapPage`。
 
 ```
 lib/
-├── l10n/           # Internationalization
-├── models/         # Data models
-├── pages/          # UI pages
-│   ├── bootstrap_page.dart
-│   ├── login_page.dart
-│   ├── home_page.dart
-│   ├── dashboard_page.dart
-│   ├── channel_page.dart
-│   ├── group_page.dart
-│   ├── model_page.dart
-│   ├── api_key_page.dart
-│   ├── log_page.dart
-│   └── setting_page.dart
-├── providers/      # State management (Provider)
-├── services/       # API service layer
+├── l10n/           # 国际化
+├── models/         # 数据模型
+├── pages/          # 页面
+│   ├── bootstrap_page.dart   # 初始化引导
+│   ├── login_page.dart       # 登录
+│   ├── home_page.dart        # 主页框架
+│   ├── dashboard_page.dart   # 仪表盘
+│   ├── channel_page.dart     # 渠道管理
+│   ├── group_page.dart       # 分组管理
+│   ├── model_page.dart       # 模型管理
+│   ├── api_key_page.dart     # API Key 管理
+│   ├── log_page.dart         # 日志
+│   └── setting_page.dart     # 设置
+├── providers/      # 状态管理（Provider）
+├── services/       # API 服务层
 │   ├── api_service.dart
 │   └── octopus_api.dart
-├── theme/          # Design tokens and responsive helpers
-├── utils/          # Shared parsing helpers
-├── widgets/        # Reusable widgets
+├── theme/          # 设计令牌与响应式辅助
+├── utils/          # 公共解析工具
+├── widgets/        # 可复用组件
 └── main.dart
 ```
 
-## Testing
+## 测试说明
 
-- `flutter test` currently runs the suite in [test/widget_test.dart](/F:/codecil/octopusmanage/test/widget_test.dart)
-- Existing tests focus on model serialization and null-safety behavior for core data models
-- There are no widget or integration tests yet
+- `flutter test` 当前执行 [test/widget_test.dart](/F:/codecil/octopusmanage/test/widget_test.dart) 中的测试
+- 现有测试主要覆盖核心模型的序列化与空值安全行为
+- 仓库暂未包含 Widget 测试或集成测试
 
-## License
+## 许可证
 
-This project is licensed under the same license as Octopus.
+本项目与 Octopus 使用相同的许可证。
