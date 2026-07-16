@@ -41,17 +41,67 @@ jobs:
           cat pubspec.yaml | head -5
 
       - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.jks
-          cat > android/key.properties << EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=release
-          storeFile=release.jks
-          EOF
+          # Fail fast if secrets are missing
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "❌ KEYSTORE_BASE64 secret is not set!"
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          if [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "❌ KEYSTORE_PASSWORD or KEY_PASSWORD secret is not set!"
+            exit 1
+          fi
+
+          # Decode keystore
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/app/release.jks
+
+          # Validate keystore file
+          if [ ! -s android/app/release.jks ]; then
+            echo "❌ Keystore file is empty after decode! Check KEYSTORE_BASE64 value."
+            exit 1
+          fi
+          echo "✅ Keystore decoded: $(ls -la android/app/release.jks)"
+
+          # Write key.properties using printf (avoids heredoc indentation & shell expansion issues)
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=release\nstoreFile=release.jks\n' \
+            "$KEYSTORE_PASSWORD" "$KEY_PASSWORD" > android/key.properties
+
+          # Verify key.properties
+          echo "✅ key.properties created:"
+          sed 's/=.*/=***/' android/key.properties
 
       - name: Build Android APK
         run: flutter build apk --release
+
+      - name: Verify APK signature
+        run: |
+          APK_PATH="build/app/outputs/flutter-apk/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ APK not found!"
+            exit 1
+          fi
+          # Extract signing certificate fingerprint
+          UNZIPPED=$(mktemp -d)
+          unzip -q "$APK_PATH" "META-INF/*.RSA" -d "$UNZIPPED" 2>/dev/null || \
+          unzip -q "$APK_PATH" "META-INF/*.DSA" -d "$UNZIPPED" 2>/dev/null || \
+          unzip -q "$APK_PATH" "META-INF/*.EC" -d "$UNZIPPED" 2>/dev/null
+          CERT=$(find "$UNZIPPED" -type f | head -1)
+          if [ -n "$CERT" ]; then
+            echo "✅ APK is signed with certificate:"
+            keytool -printcert -file "$CERT" 2>/dev/null | grep -E "SHA256|Owner|Valid"
+          else
+            echo "⚠️ No signing certificate found in APK — APK may be unsigned or use v2/v3 signing only"
+            # Try apksigner if available
+            if command -v apksigner &>/dev/null; then
+              apksigner verify --print-certs "$APK_PATH" 2>/dev/null | grep -E "SHA-256|Signer|cert" || true
+            fi
+          fi
+          rm -rf "$UNZIPPED"
 
       - name: Build Web
         run: flutter build web --release
@@ -100,19 +150,13 @@ jobs:
           body: |
             ## Octopus Manager ${{ github.ref_name }}
 
-            ### Downloads
-            - **Android**: `octopus-manager-android.apk`
+            ### 下载
+            - **Android**: `app-release.apk`
             - **Web**: `octopus-manager-web.zip`
 
-            ### What's New
-            - Initial release
-            - Login with remember me support
-            - Bootstrap initial admin account setup
-            - Dashboard with real-time stats
-            - Channel, Group, API Key management
-            - Relay logs
-            - Server settings
-            - English & Chinese i18n
+            ### Downloads
+            - **Android**: `app-release.apk`
+            - **Web**: `octopus-manager-web.zip`
           draft: false
           prerelease: false
           files: |
