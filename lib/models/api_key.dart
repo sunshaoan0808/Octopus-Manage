@@ -7,7 +7,9 @@ class APIKey {
   final bool enabled;
   final int expireAt;
   final double maxCost;
+  final int maxTokens;
   final String supportedModels;
+  final String allowedGroupCategories;
   final int rateLimitRPM;
   final int rateLimitTPM;
   final String perModelQuotaJson;
@@ -24,7 +26,9 @@ class APIKey {
     this.enabled = true,
     this.expireAt = 0,
     this.maxCost = 0,
+    this.maxTokens = 0,
     this.supportedModels = '',
+    this.allowedGroupCategories = '',
     this.rateLimitRPM = 0,
     this.rateLimitTPM = 0,
     this.perModelQuotaJson = '',
@@ -41,7 +45,9 @@ class APIKey {
       enabled: parseBool(json['enabled'], fallback: true),
       expireAt: parseInt(json['expire_at']),
       maxCost: parseDouble(json['max_cost']),
+      maxTokens: parseInt(json['max_tokens']),
       supportedModels: parseString(json['supported_models']),
+      allowedGroupCategories: parseString(json['allowed_group_categories']),
       rateLimitRPM: parseInt(json['rate_limit_rpm']),
       rateLimitTPM: parseInt(json['rate_limit_tpm']),
       perModelQuotaJson: parseString(json['per_model_quota_json']),
@@ -60,7 +66,9 @@ class APIKey {
       'enabled': enabled,
       'expire_at': expireAt,
       'max_cost': maxCost,
+      'max_tokens': maxTokens,
       if (supportedModels.isNotEmpty) 'supported_models': supportedModels,
+      if (allowedGroupCategories.isNotEmpty) 'allowed_group_categories': allowedGroupCategories,
       'rate_limit_rpm': rateLimitRPM,
       'rate_limit_tpm': rateLimitTPM,
       if (perModelQuotaJson.isNotEmpty) 'per_model_quota_json': perModelQuotaJson,

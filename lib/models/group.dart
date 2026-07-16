@@ -3,51 +3,60 @@ import 'package:octopusmanage/utils/parse_utils.dart';
 class Group {
   final int id;
   final String name;
+  final String category;
   final String endpointType;
+  final String endpointProvider;
+  final String outboundFormat;
   final int mode;
   final String matchRegex;
   final int firstTokenTimeOut;
+  final int attemptTimeOut;
   final int sessionKeepTime;
-  final String createdTime;
-  final List<GroupItem> items;
-
-  // Phase 2.3: New fields
-  final String endpointProvider;
-  final String outboundFormat;
   final String condition;
+  final bool? lastTestPassed;
+  final bool? lastTestAllFailed;
+  final int lastTestAt;
+  final List<GroupItem> items;
 
   Group({
     required this.id,
     required this.name,
+    this.category = '',
     this.endpointType = '*',
+    this.endpointProvider = '',
+    this.outboundFormat = '',
     this.mode = 1,
     this.matchRegex = '',
     this.firstTokenTimeOut = 0,
+    this.attemptTimeOut = 0,
     this.sessionKeepTime = 0,
-    this.createdTime = '',
-    this.items = const [],
-    this.endpointProvider = '',
-    this.outboundFormat = '',
     this.condition = '',
+    this.lastTestPassed,
+    this.lastTestAllFailed,
+    this.lastTestAt = 0,
+    this.items = const [],
   });
 
   factory Group.fromJson(Map<String, dynamic> json) {
     return Group(
       id: parseInt(json['id']),
       name: parseString(json['name']),
+      category: parseString(json['category']),
       endpointType: normalizeGroupEndpointType(
         parseString(json['endpoint_type'], fallback: '*'),
       ),
+      endpointProvider: parseString(json['endpoint_provider']),
+      outboundFormat: parseString(json['outbound_format']),
       mode: parseInt(json['mode']),
       matchRegex: parseString(json['match_regex']),
       firstTokenTimeOut: parseInt(json['first_token_time_out']),
+      attemptTimeOut: parseInt(json['attempt_time_out']),
       sessionKeepTime: parseInt(json['session_keep_time']),
-      createdTime: parseString(json['created_time']),
-      items: parseJsonMapList(json['items']).map(GroupItem.fromJson).toList(),
-      // Phase 2.3: New fields
-      endpointProvider: parseString(json['endpoint_provider']),
-      outboundFormat: parseString(json['outbound_format']),
       condition: parseString(json['condition']),
+      lastTestPassed: json['last_test_passed'],
+      lastTestAllFailed: json['last_test_all_failed'],
+      lastTestAt: parseInt(json['last_test_at']),
+      items: parseJsonMapList(json['items']).map(GroupItem.fromJson).toList(),
     );
   }
 
@@ -55,17 +64,20 @@ class Group {
     return {
       if (id > 0) 'id': id,
       'name': name,
+      if (category.isNotEmpty) 'category': category,
       'endpoint_type': normalizeGroupEndpointType(endpointType),
+      if (endpointProvider.isNotEmpty) 'endpoint_provider': endpointProvider,
+      if (outboundFormat.isNotEmpty) 'outbound_format': outboundFormat,
       'mode': mode,
       'match_regex': matchRegex,
       'first_token_time_out': firstTokenTimeOut,
+      'attempt_time_out': attemptTimeOut,
       'session_keep_time': sessionKeepTime,
-      if (createdTime.isNotEmpty) 'created_time': createdTime,
-      'items': items.map((e) => e.toJson()).toList(),
-      // Phase 2.3: New fields
-      if (endpointProvider.isNotEmpty) 'endpoint_provider': endpointProvider,
-      if (outboundFormat.isNotEmpty) 'outbound_format': outboundFormat,
       if (condition.isNotEmpty) 'condition': condition,
+      if (lastTestPassed != null) 'last_test_passed': lastTestPassed,
+      if (lastTestAllFailed != null) 'last_test_all_failed': lastTestAllFailed,
+      'last_test_at': lastTestAt,
+      'items': items.map((e) => e.toJson()).toList(),
     };
   }
 }

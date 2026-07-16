@@ -54,7 +54,15 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
           enabled: !key.enabled,
           expireAt: key.expireAt,
           maxCost: key.maxCost,
+          maxTokens: key.maxTokens,
+          allowedGroupCategories: key.allowedGroupCategories,
           supportedModels: key.supportedModels,
+          rateLimitRPM: key.rateLimitRPM,
+          rateLimitTPM: key.rateLimitTPM,
+          perModelQuotaJson: key.perModelQuotaJson,
+          allowedIps: key.allowedIps,
+          tags: key.tags,
+          excludedChannels: key.excludedChannels,
         ),
       );
       _loadKeys();
@@ -93,6 +101,12 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
     final nameCtl = TextEditingController(text: existing?.name ?? '');
     final maxCostCtl = TextEditingController(
       text: existing?.maxCost.toString() ?? '0',
+    );
+    final maxTokensCtl = TextEditingController(
+      text: existing?.maxTokens.toString() ?? '0',
+    );
+    final allowedGroupCategoriesCtl = TextEditingController(
+      text: existing?.allowedGroupCategories ?? '',
     );
     final expireAtCtl = TextEditingController(
       text: existing?.expireAt.toString() ?? '0',
@@ -158,6 +172,36 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
                       ),
                       padding: const EdgeInsets.all(12),
                       keyboardType: TextInputType.number,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: maxTokensCtl,
+                      placeholder: '最大Token限额',
+                      prefix: Padding(
+                        padding: const EdgeInsets.only(left: 12),
+                        child: Text(
+                          '🔢',
+                          style: TextStyle(
+                            color: CupertinoColors.systemGrey.resolveFrom(ctx),
+                          ),
+                        ),
+                      ),
+                      padding: const EdgeInsets.all(12),
+                      keyboardType: TextInputType.number,
+                      decoration: BoxDecoration(
+                        color: CupertinoColors.systemGrey5.resolveFrom(ctx),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.spacingMd),
+                    CupertinoTextField(
+                      controller: allowedGroupCategoriesCtl,
+                      placeholder: '允许访问的分组类别',
+                      padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
                         color: CupertinoColors.systemGrey5.resolveFrom(ctx),
                         borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
@@ -284,6 +328,8 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
     // 先提取文本再 dispose，避免 use-after-dispose
     final name = nameCtl.text.trim();
     final maxCostText = maxCostCtl.text;
+    final maxTokensText = maxTokensCtl.text;
+    final allowedGroupCategories = allowedGroupCategoriesCtl.text.trim();
     final expireAtText = expireAtCtl.text;
     final supportedModels = supportedModelsCtl.text.trim();
     final rpmText = rpmCtl.text;
@@ -296,6 +342,8 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
 
     nameCtl.dispose();
     maxCostCtl.dispose();
+    maxTokensCtl.dispose();
+    allowedGroupCategoriesCtl.dispose();
     expireAtCtl.dispose();
     supportedModelsCtl.dispose();
     rpmCtl.dispose();
@@ -320,6 +368,8 @@ class _ApiKeyPageState extends State<ApiKeyPage> {
         enabled: enabled,
         expireAt: int.tryParse(expireAtText) ?? 0,
         maxCost: double.tryParse(maxCostText) ?? 0,
+        maxTokens: int.tryParse(maxTokensText) ?? 0,
+        allowedGroupCategories: allowedGroupCategories,
         supportedModels: supportedModels,
         rateLimitRPM: int.tryParse(rpmText) ?? 0,
         rateLimitTPM: int.tryParse(tpmText) ?? 0,

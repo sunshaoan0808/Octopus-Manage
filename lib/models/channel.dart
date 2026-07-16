@@ -15,15 +15,63 @@ enum ProxyUsageMode {
   }
 }
 
+/// Request rewrite profile type
+enum RequestRewriteProfile {
+  preserve,
+  openaiChatCompat,
+  codex;
+
+  static RequestRewriteProfile fromString(String value) {
+    return RequestRewriteProfile.values.firstWhere(
+      (e) => e.name == value,
+      orElse: () => RequestRewriteProfile.preserve,
+    );
+  }
+}
+
+/// Tool role rewrite strategy
+enum ToolRoleStrategy {
+  keep,
+  stringifyToUser;
+
+  static ToolRoleStrategy fromString(String value) {
+    return ToolRoleStrategy.values.firstWhere(
+      (e) => e.name.toLowerCase() == value.toLowerCase(),
+      orElse: () => ToolRoleStrategy.keep,
+    );
+  }
+}
+
+/// System message rewrite strategy
+enum SystemMessageStrategy {
+  keep,
+  merge;
+
+  static SystemMessageStrategy fromString(String value) {
+    return SystemMessageStrategy.values.firstWhere(
+      (e) => e.name.toLowerCase() == value.toLowerCase(),
+      orElse: () => SystemMessageStrategy.keep,
+    );
+  }
+}
+
 /// Request rewrite configuration for a channel.
 class RequestRewriteConfig {
   final bool enabled;
+  final RequestRewriteProfile profile;
+  final ToolRoleStrategy toolRoleStrategy;
+  final SystemMessageStrategy systemMessageStrategy;
+  final String? headerProfile;
   final String? promptPrefix;
   final String? promptSuffix;
   final String? systemMessage;
 
   const RequestRewriteConfig({
     this.enabled = false,
+    this.profile = RequestRewriteProfile.preserve,
+    this.toolRoleStrategy = ToolRoleStrategy.keep,
+    this.systemMessageStrategy = SystemMessageStrategy.keep,
+    this.headerProfile,
     this.promptPrefix,
     this.promptSuffix,
     this.systemMessage,
@@ -33,6 +81,18 @@ class RequestRewriteConfig {
     if (json == null) return const RequestRewriteConfig();
     return RequestRewriteConfig(
       enabled: parseBool(json['enabled']),
+      profile: RequestRewriteProfile.fromString(
+        parseString(json['profile'], fallback: 'preserve'),
+      ),
+      toolRoleStrategy: ToolRoleStrategy.fromString(
+        parseString(json['tool_role_strategy'], fallback: 'keep'),
+      ),
+      systemMessageStrategy: SystemMessageStrategy.fromString(
+        parseString(json['system_message_strategy'], fallback: 'keep'),
+      ),
+      headerProfile: json['header_profile'] == null
+          ? null
+          : parseString(json['header_profile']),
       promptPrefix: json['prompt_prefix'] == null
           ? null
           : parseString(json['prompt_prefix']),
@@ -47,6 +107,10 @@ class RequestRewriteConfig {
 
   Map<String, dynamic> toJson() => {
         'enabled': enabled,
+        'profile': profile.name,
+        'tool_role_strategy': toolRoleStrategy.name.toLowerCase(),
+        'system_message_strategy': systemMessageStrategy.name.toLowerCase(),
+        if (headerProfile != null) 'header_profile': headerProfile,
         if (promptPrefix != null) 'prompt_prefix': promptPrefix,
         if (promptSuffix != null) 'prompt_suffix': promptSuffix,
         if (systemMessage != null) 'system_message': systemMessage,
@@ -65,20 +129,27 @@ class Channel {
   final bool proxy;
   final bool autoSync;
   final int autoGroup;
+  final bool skipModelTest;
+  final bool disposable;
+  final String? expireAt;
+  final int? notifChannelId;
+  final String keySelectionStrategy;
   final List<CustomHeader> customHeader;
   final String? paramOverride;
   final String? channelProxy;
+  final RequestRewriteConfig? requestRewrite;
   final StatsChannel? stats;
   final String? matchRegex;
+  final bool? keyHealthPassed;
+  final bool? keyHealthAllFailed;
+  final int keyHealthAt;
+  final bool managed;
+  final ManagedChannelSource? managedSource;
 
   // Phase 2.4: New fields
   final int? groupId;
   final ProxyUsageMode proxyMode;
   final int? proxyConfigId;
-  final bool skipModelTest;
-  final RequestRewriteConfig? requestRewrite;
-  final bool managed;
-  final String? managedSource;
 
   Channel({
     required this.id,
@@ -92,18 +163,25 @@ class Channel {
     this.proxy = false,
     this.autoSync = false,
     this.autoGroup = 0,
+    this.skipModelTest = false,
+    this.disposable = false,
+    this.expireAt,
+    this.notifChannelId,
+    this.keySelectionStrategy = '',
     this.customHeader = const [],
     this.paramOverride,
     this.channelProxy,
+    this.requestRewrite,
     this.stats,
     this.matchRegex,
+    this.keyHealthPassed,
+    this.keyHealthAllFailed,
+    this.keyHealthAt = 0,
+    this.managed = false,
+    this.managedSource,
     this.groupId,
     this.proxyMode = ProxyUsageMode.direct,
     this.proxyConfigId,
-    this.skipModelTest = false,
-    this.requestRewrite,
-    this.managed = false,
-    this.managedSource,
   });
 
   factory Channel.fromJson(Map<String, dynamic> json) {
@@ -121,6 +199,15 @@ class Channel {
       proxy: parseBool(json['proxy']),
       autoSync: parseBool(json['auto_sync']),
       autoGroup: parseInt(json['auto_group']),
+      skipModelTest: parseBool(json['skip_model_test']),
+      disposable: parseBool(json['disposable']),
+      expireAt: json['expire_at'] == null
+          ? null
+          : parseString(json['expire_at']),
+      notifChannelId: json['notif_channel_id'] == null
+          ? null
+          : parseInt(json['notif_channel_id']),
+      keySelectionStrategy: parseString(json['key_selection_strategy']),
       customHeader: parseJsonMapList(
         json['custom_header'],
       ).map(CustomHeader.fromJson).toList(),
@@ -130,12 +217,22 @@ class Channel {
       channelProxy: json['channel_proxy'] == null
           ? null
           : parseString(json['channel_proxy']),
+      requestRewrite: RequestRewriteConfig.fromJson(
+        parseJsonMap(json['request_rewrite']),
+      ),
       stats: parseJsonMap(json['stats']) != null
           ? StatsChannel.fromJson(parseJsonMap(json['stats'])!)
           : null,
       matchRegex: json['match_regex'] == null
           ? null
           : parseString(json['match_regex']),
+      keyHealthPassed: json['key_health_passed'],
+      keyHealthAllFailed: json['key_health_all_failed'],
+      keyHealthAt: parseInt(json['key_health_at']),
+      managed: parseBool(json['managed']),
+      managedSource: parseJsonMap(json['managed_source']) != null
+          ? ManagedChannelSource.fromJson(parseJsonMap(json['managed_source'])!)
+          : null,
       // Phase 2.4 new fields
       groupId: json['group_id'] == null ? null : parseInt(json['group_id']),
       proxyMode: ProxyUsageMode.fromString(
@@ -144,14 +241,6 @@ class Channel {
       proxyConfigId: json['proxy_config_id'] == null
           ? null
           : parseInt(json['proxy_config_id']),
-      skipModelTest: parseBool(json['skip_model_test']),
-      requestRewrite: RequestRewriteConfig.fromJson(
-        parseJsonMap(json['request_rewrite']),
-      ),
-      managed: parseBool(json['managed']),
-      managedSource: json['managed_source'] == null
-          ? null
-          : parseString(json['managed_source']),
     );
   }
 
@@ -168,20 +257,56 @@ class Channel {
       'proxy': proxy,
       'auto_sync': autoSync,
       'auto_group': autoGroup,
+      'skip_model_test': skipModelTest,
+      'disposable': disposable,
+      if (expireAt != null) 'expire_at': expireAt,
+      if (notifChannelId != null) 'notif_channel_id': notifChannelId,
+      'key_selection_strategy': keySelectionStrategy,
       'custom_header': customHeader.map((e) => e.toJson()).toList(),
       if (paramOverride != null) 'param_override': paramOverride,
       if (channelProxy != null) 'channel_proxy': channelProxy,
+      if (requestRewrite != null) 'request_rewrite': requestRewrite!.toJson(),
       if (matchRegex != null) 'match_regex': matchRegex,
+      if (keyHealthPassed != null) 'key_health_passed': keyHealthPassed,
+      if (keyHealthAllFailed != null) 'key_health_all_failed': keyHealthAllFailed,
+      'key_health_at': keyHealthAt,
+      'managed': managed,
+      if (managedSource != null) 'managed_source': managedSource!.toJson(),
       // Phase 2.4 new fields
       if (groupId != null) 'group_id': groupId,
       'proxy_mode': proxyMode.name,
       if (proxyConfigId != null) 'proxy_config_id': proxyConfigId,
-      'skip_model_test': skipModelTest,
-      if (requestRewrite != null) 'request_rewrite': requestRewrite!.toJson(),
-      'managed': managed,
-      if (managedSource != null) 'managed_source': managedSource,
     };
   }
+}
+
+/// Managed channel source info
+class ManagedChannelSource {
+  final String sourceType;
+  final String sourceId;
+  final String? importTimestamp;
+
+  const ManagedChannelSource({
+    required this.sourceType,
+    required this.sourceId,
+    this.importTimestamp,
+  });
+
+  factory ManagedChannelSource.fromJson(Map<String, dynamic> json) {
+    return ManagedChannelSource(
+      sourceType: parseString(json['source_type']),
+      sourceId: parseString(json['source_id']),
+      importTimestamp: json['import_timestamp'] == null
+          ? null
+          : parseString(json['import_timestamp']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'source_type': sourceType,
+        'source_id': sourceId,
+        if (importTimestamp != null) 'import_timestamp': importTimestamp,
+      };
 }
 
 class BaseUrl {
@@ -235,6 +360,7 @@ class ChannelKey {
   final int statusCode;
   final int lastUseTimeStamp;
   final double totalCost;
+  final int priority;
   final String remark;
 
   ChannelKey({
@@ -245,6 +371,7 @@ class ChannelKey {
     this.statusCode = 0,
     this.lastUseTimeStamp = 0,
     this.totalCost = 0,
+    this.priority = 0,
     this.remark = '',
   });
 
@@ -257,6 +384,7 @@ class ChannelKey {
       statusCode: parseInt(json['status_code']),
       lastUseTimeStamp: parseInt(json['last_use_time_stamp']),
       totalCost: parseDouble(json['total_cost']),
+      priority: parseInt(json['priority']),
       remark: parseString(json['remark']),
     );
   }
@@ -267,6 +395,9 @@ class ChannelKey {
     'enabled': enabled,
     'channel_key': channelKey,
     'status_code': statusCode,
+    'last_use_time_stamp': lastUseTimeStamp,
+    'total_cost': totalCost,
+    'priority': priority,
     'remark': remark,
   };
 }
