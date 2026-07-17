@@ -113,6 +113,11 @@ jobs:
           name: web-build
           path: ./artifacts/web/
 
+      - name: Package Web build
+        run: |
+          cd ./artifacts/web && zip -r ../web-build.zip . && cd ..
+          ls -la *.apk *.zip
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -129,4 +134,4 @@ jobs:
             ---
           files: |
             ./artifacts/app-release.apk
-            ./artifacts/web/web-build.zip
+            ./artifacts/web-build.zip
