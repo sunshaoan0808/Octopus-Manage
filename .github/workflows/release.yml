@@ -54,6 +54,11 @@ jobs:
       - name: Build APK
         run: flutter build apk --release --build-name=${{ steps.version.outputs.version }}
 
+      - name: Setup Android SDK (for apksigner)
+        uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '11076708'  # latest
+
       - name: Verify APK signature
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -61,75 +66,26 @@ jobs:
         run: |
           set -e
           APK=build/app/outputs/flutter-apk/app-release.apk
+          APKSIGNER=$ANDROID_HOME/build-tools/*/apksigner
           echo "=== 1. Keystore cert (expected) ==="
           keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>&1 \
             | grep -E "SHA1:|SHA256:|Owner:" | head -5
           echo
-          echo "=== 2. APK v2/v3 signer cert (from APK Signing Block) ==="
-          python3 - <<'PYEOF'
-          import struct, subprocess, tempfile, hashlib
-          APK = "build/app/outputs/flutter-apk/app-release.apk"
-          with open(APK, 'rb') as f: data = f.read()
-          eocd = data.rfind(b'PK\x05\x06')
-          cd_off = struct.unpack('<I', data[eocd+16:eocd+20])[0]
-          sig_magic = b'APK Sig Block 42'
-          m = data.rfind(sig_magic, 0, cd_off)
-          assert m > 0, "No APK Signing Block"
-          block_len = struct.unpack('<Q', data[m-8:m])[0]
-          start = m - block_len - 8
-          pos = start
-          # sequence: length-prefixed pairs
-          seq_len = struct.unpack('<I', data[pos:pos+4])[0]
-          pos += 4
-          v2_cert = None
-          while pos < m:
-              pl = struct.unpack('<I', data[pos:pos+4])[0]
-              pid = struct.unpack('<I', data[pos+4:pos+8])[0]
-              if pid == 0x7109871a:  # APK v2 block
-                  # parse: signers sequence
-                  p = pos + 8
-                  signers_len = struct.unpack('<I', data[p:p+4])[0]
-                  p += 4
-                  sl = struct.unpack('<I', data[p:p+4])[0]
-                  p += 4
-                  sd_len = struct.unpack('<I', data[p:p+4])[0]
-                  p += 4
-                  # signed_data
-                  p_sd = p
-                  p += sd_len
-                  sig_len = struct.unpack('<I', data[p:p+4])[0]
-                  p += 4 + sig_len
-                  pk_len = struct.unpack('<I', data[p:p+4])[0]
-                  p += 4 + pk_len
-                  # back to signed_data, skip digests, then certs
-                  d_len = struct.unpack('<I', data[p_sd:p_sd+4])[0]
-                  p_certs = p_sd + 4 + d_len
-                  c_len = struct.unpack('<I', data[p_certs:p_certs+4])[0]
-                  p_certs += 4
-                  c1_len = struct.unpack('<I', data[p_certs:p_certs+4])[0]
-                  p_certs += 4
-                  v2_cert = data[p_certs:p_certs+c1_len]
-                  break
-              pos += 4 + pl
-          if v2_cert is None:
-              print("❌ No v2 cert found in APK"); raise SystemExit(1)
-          with tempfile.NamedTemporaryFile(suffix='.der', delete=False) as t:
-              t.write(v2_cert); tname = t.name
-          out = subprocess.check_output(['openssl', 'x509', '-inform', 'DER', '-in', tname,
-                                        '-noout', '-fingerprint', '-sha1']).decode()
-          for line in out.splitlines():
-              if 'SHA1 Fingerprint' in line:
-                  sha1 = line.split('=',1)[1].strip()
-                  print('APK_SHA1=' + sha1)
-                  with open('/tmp/apk_sha1.txt', 'w') as f: f.write(sha1)
-          PYEOF
-          APK_SHA1=$(cat /tmp/apk_sha1.txt 2>/dev/null || echo "")
+          echo "=== 2. APK signer cert (apksigner verify) ==="
+          $APKSIGNER verify --print-certs "$APK" 2>&1 | tee /tmp/apk-cert.txt
+          echo
+          echo "=== 3. SHA1 comparison ==="
           KEYSTORE_SHA1=$(keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null \
             | grep "SHA1:" | head -1 | awk '{print $2}')
+          # apksigner prints: "SHA-1 digest: <hex>" or sometimes "Signer #1 certificate DN: ..."
+          APK_SHA1=$($APKSIGNER verify --print-certs "$APK" 2>&1 | grep -oE "SHA-1 digest: [a-f0-9:]+" | awk '{print $3}' | head -1)
+          if [ -z "$APK_SHA1" ]; then
+            APK_SHA1=$($APKSIGNER verify --print-certs "$APK" 2>&1 | openssl x509 -fingerprint -sha1 -noout 2>/dev/null | awk -F= '{print $2}')
+          fi
           echo "Keystore SHA1: $KEYSTORE_SHA1"
           echo "APK     SHA1: $APK_SHA1"
           if [ -z "$APK_SHA1" ] || [ "$KEYSTORE_SHA1" != "$APK_SHA1" ]; then
-            echo "❌ ERROR: signature mismatch or APK not v2-signed"
+            echo "❌ ERROR: signature mismatch or apksigner can't extract cert"
             exit 1
           fi
           echo "✅ Signature verified"
