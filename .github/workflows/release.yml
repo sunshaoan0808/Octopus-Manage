@@ -11,8 +11,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,10 +35,9 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          # Hard requirement: keystore MUST come from Secrets, no embedded fallback
           if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
             echo "❌ ERROR: missing one of KEYSTORE_BASE64/KEYSTORE_PASSWORD/KEY_PASSWORD/KEY_ALIAS in repo Secrets"
-            echo "Please configure them at: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo "Configure at: https://github.com/${{ github.repository }}/settings/secrets/actions"
             exit 1
           fi
           mkdir -p android/app
@@ -49,13 +46,10 @@ jobs:
             echo "❌ ERROR: release.jks is empty after decode"
             exit 1
           fi
-          echo "✅ Keystore size: $(wc -c < android/app/release.jks) bytes"
-
-          # key.properties: alias is parameterized, passwords are masked in logs
           printf 'storePassword=%s\nkeyAlias=%s\nkeyPassword=%s\nstoreFile=release.jks\n' \
             "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > android/key.properties
           chmod 600 android/app/release.jks android/key.properties
-          echo "✅ key.properties created (alias=$KEY_ALIAS)"
+          echo "✅ Keystore ready, alias=$KEY_ALIAS"
 
       - name: Build APK
         run: flutter build apk --release --build-name=${{ steps.version.outputs.version }}
@@ -65,19 +59,77 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
         run: |
-          echo "=== APK Signature Info ==="
-          $ANDROID_HOME/build-tools/*/apksigner verify --print-certs build/app/outputs/flutter-apk/app-release.apk | tee /tmp/apk-cert.txt
+          set -e
+          APK=build/app/outputs/flutter-apk/app-release.apk
+          echo "=== 1. Keystore cert (expected) ==="
+          keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>&1 \
+            | grep -E "SHA1:|SHA256:|Owner:" | head -5
           echo
-          echo "=== Keystore Certificate (should match APK signer) ==="
-          keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>&1 | head -30
-          echo
-          echo "=== Sanity check: ensure cert in APK matches cert in keystore ==="
-          KEYSTORE_SHA1=$(keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null | grep "SHA1:" | awk '{print $2}')
-          APK_SHA1=$(grep -oE "SHA-1 digest: [a-f0-9:]+" /tmp/apk-cert.txt | awk '{print $3}')
+          echo "=== 2. APK v2/v3 signer cert (from APK Signing Block) ==="
+          python3 - <<'PYEOF'
+          import struct, subprocess, tempfile, hashlib
+          APK = "build/app/outputs/flutter-apk/app-release.apk"
+          with open(APK, 'rb') as f: data = f.read()
+          eocd = data.rfind(b'PK\x05\x06')
+          cd_off = struct.unpack('<I', data[eocd+16:eocd+20])[0]
+          sig_magic = b'APK Sig Block 42'
+          m = data.rfind(sig_magic, 0, cd_off)
+          assert m > 0, "No APK Signing Block"
+          block_len = struct.unpack('<Q', data[m-8:m])[0]
+          start = m - block_len - 8
+          pos = start
+          # sequence: length-prefixed pairs
+          seq_len = struct.unpack('<I', data[pos:pos+4])[0]
+          pos += 4
+          v2_cert = None
+          while pos < m:
+              pl = struct.unpack('<I', data[pos:pos+4])[0]
+              pid = struct.unpack('<I', data[pos+4:pos+8])[0]
+              if pid == 0x7109871a:  # APK v2 block
+                  # parse: signers sequence
+                  p = pos + 8
+                  signers_len = struct.unpack('<I', data[p:p+4])[0]
+                  p += 4
+                  sl = struct.unpack('<I', data[p:p+4])[0]
+                  p += 4
+                  sd_len = struct.unpack('<I', data[p:p+4])[0]
+                  p += 4
+                  # signed_data
+                  p_sd = p
+                  p += sd_len
+                  sig_len = struct.unpack('<I', data[p:p+4])[0]
+                  p += 4 + sig_len
+                  pk_len = struct.unpack('<I', data[p:p+4])[0]
+                  p += 4 + pk_len
+                  # back to signed_data, skip digests, then certs
+                  d_len = struct.unpack('<I', data[p_sd:p_sd+4])[0]
+                  p_certs = p_sd + 4 + d_len
+                  c_len = struct.unpack('<I', data[p_certs:p_certs+4])[0]
+                  p_certs += 4
+                  c1_len = struct.unpack('<I', data[p_certs:p_certs+4])[0]
+                  p_certs += 4
+                  v2_cert = data[p_certs:p_certs+c1_len]
+                  break
+              pos += 4 + pl
+          if v2_cert is None:
+              print("❌ No v2 cert found in APK"); raise SystemExit(1)
+          with tempfile.NamedTemporaryFile(suffix='.der', delete=False) as t:
+              t.write(v2_cert); tname = t.name
+          out = subprocess.check_output(['openssl', 'x509', '-inform', 'DER', '-in', tname,
+                                        '-noout', '-fingerprint', '-sha1']).decode()
+          for line in out.splitlines():
+              if 'SHA1 Fingerprint' in line:
+                  sha1 = line.split('=',1)[1].strip()
+                  print('APK_SHA1=' + sha1)
+                  with open('/tmp/apk_sha1.txt', 'w') as f: f.write(sha1)
+          PYEOF
+          APK_SHA1=$(cat /tmp/apk_sha1.txt 2>/dev/null || echo "")
+          KEYSTORE_SHA1=$(keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null \
+            | grep "SHA1:" | head -1 | awk '{print $2}')
           echo "Keystore SHA1: $KEYSTORE_SHA1"
           echo "APK     SHA1: $APK_SHA1"
-          if [ "$KEYSTORE_SHA1" != "$APK_SHA1" ]; then
-            echo "❌ ERROR: APK signer SHA1 does not match keystore cert SHA1"
+          if [ -z "$APK_SHA1" ] || [ "$KEYSTORE_SHA1" != "$APK_SHA1" ]; then
+            echo "❌ ERROR: signature mismatch or APK not v2-signed"
             exit 1
           fi
           echo "✅ Signature verified"
@@ -103,19 +155,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Download APK artifact
         uses: actions/download-artifact@v4
         with:
           name: android-apk
           path: ./artifacts/
-
       - name: Download Web artifact
         uses: actions/download-artifact@v4
         with:
           name: web-build
           path: ./artifacts/web/
-
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
@@ -128,8 +177,6 @@ jobs:
 
             ### Web
             下载 `web-build.zip` 解压后部署到任意静态服务器。
-
-            ---
           files: |
             ./artifacts/app-release.apk
             ./artifacts/web/web-build.zip
