@@ -75,9 +75,9 @@ jobs:
           $APKSIGNER verify --print-certs "$APK" 2>&1 | tee /tmp/apk-cert.txt
           echo
           echo "=== 3. SHA1 comparison ==="
-          KEYSTORE_SHA1=$(keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}' | tr -d :)
+          KEYSTORE_SHA1=$(keytool -list -v -keystore android/app/release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}' | tr -d : | tr 'A-Z' 'a-z')
           # apksigner prints: "SHA-1 digest: <hex>" or sometimes "Signer #1 certificate DN: ..."
-          APK_SHA1=$($APKSIGNER verify --print-certs "$APK" 2>&1 | grep -oE "SHA-1 digest: [a-f0-9:]+" | head -1 | awk '{print $3}' | tr -d :)
+          APK_SHA1=$($APKSIGNER verify --print-certs "$APK" 2>&1 | grep -oE "SHA-1 digest: [a-f0-9:]+" | head -1 | awk '{print $3}' | tr -d : | tr 'A-Z' 'a-z')
           if [ -z "$APK_SHA1" ]; then
             APK_SHA1=$($APKSIGNER verify --print-certs "$APK" 2>&1 | openssl x509 -fingerprint -sha1 -noout 2>/dev/null | awk -F= '{print $2}')
           fi
